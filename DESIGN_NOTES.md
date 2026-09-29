@@ -10,14 +10,13 @@
 - 桌面壳：Electron（可选打包）
 - 无后端：照片本机处理，设置写 localStorage
 
-## Token
-- `--ink` #E8E4D9 — 主文字
-- `--panel` #1C1B18 — 左栏底
-- `--stage` #0E0D0C — 画布台
-- `--amber` #C9A227 — 强调 / 选中 / 焦点环
-- `--muted` #8A857A — 次级文字
-- `--rule` #2E2C27 — 分割线
-- `--danger` #C45C4A — 错误
+## Token（HeroUI · Uber 预设）
+来源：HeroUI 主题编辑器 `id="uber"`（chroma=0 / hue=0 / radius=small / Inter）
+- 背景：纯灰度（light 白 · dark 近黑）
+- 强调：light 黑 `oklch(15% 0 0)` · dark 白 `oklch(98% 0 0)`
+- 圆角：`--radius: 0.25rem`（small）
+- 字体：Inter / system-ui
+- 状态色沿用 Uber 预设 semanticOverrides
 
 ## 字体
 - 展示：Georgia / Songti SC / SimSun serif

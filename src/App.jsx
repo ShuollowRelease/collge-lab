@@ -16,6 +16,8 @@ import { LAYOUTS, RATIOS, THEMES, defaultState, FONTS } from "./engine/constants
 import { paintCollage, exportImage, themeOf } from "./engine/draw.js";
 import { previewSize } from "./engine/layouts.js";
 import { PRESET_GROUPS, PRESETS } from "./engine/presets.js";
+import { useUiTheme } from "./hooks/useUiTheme.js";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 
 const SETTINGS_KEY = "photo-cut-settings-v3";
 
@@ -33,7 +35,7 @@ function LayoutThumb({ cells }) {
 function FieldSelect({ label, value, onChange, options }) {
   return (
     <div className="field-row">
-      <Label className="text-xs text-[color:var(--color-muted)]">{label}</Label>
+      <Label className="text-xs text-[color:var(--muted)]">{label}</Label>
       <Select
         selectedKey={value}
         onSelectionChange={(k) => onChange(String(k))}
@@ -63,7 +65,7 @@ function FieldSlider({ label, value, min, max, step = 1, onChange, format }) {
     <div className="field-row">
       <div className="field-label">
         <span>{label}</span>
-        <span className="mono text-[color:var(--color-amber)]">{format ? format(value) : value}</span>
+        <span className="mono text-[color:var(--accent)]">{format ? format(value) : value}</span>
       </div>
       <Slider
         minValue={min}
@@ -85,7 +87,7 @@ function FieldSlider({ label, value, min, max, step = 1, onChange, format }) {
 function FieldText({ label, value, onChange, placeholder, maxLength = 60 }) {
   return (
     <div className="field-row">
-      <Label className="text-xs text-[color:var(--color-muted)]">{label}</Label>
+      <Label className="text-xs text-[color:var(--muted)]">{label}</Label>
       <TextField value={value} onChange={onChange} className="w-full" aria-label={label}>
         <Input placeholder={placeholder} maxLength={maxLength} variant="secondary" />
       </TextField>
@@ -94,6 +96,7 @@ function FieldText({ label, value, onChange, placeholder, maxLength = 60 }) {
 }
 
 export default function App() {
+  const { mode: uiTheme, setTheme: setUiTheme } = useUiTheme();
   const [state, setState] = useState(() => {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
@@ -211,15 +214,16 @@ export default function App() {
           <div className="brand">
             photo<span>-cut</span>
           </div>
-          <Separator orientation="vertical" className="h-6 opacity-40" />
-          <div className="text-xs text-[color:var(--color-muted)]">本机拼贴 · HeroUI / React</div>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="text-xs text-[color:var(--muted)]">React + HeroUI · 本机拼贴</div>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle mode={uiTheme} onChange={setUiTheme} />
           <Button variant="ghost" size="sm" onPress={() => patch(defaultState())}>
             重置
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onPress={() => {
               const { photos: _p, ...rest } = state;
@@ -333,7 +337,7 @@ export default function App() {
               {activePhoto && (
                 <div className="panel-section">
                   <h2>当前照片</h2>
-                  <div className="text-xs text-[color:var(--color-muted)] mb-2 truncate">{activePhoto.name}</div>
+                  <div className="text-xs text-[color:var(--muted)] mb-2 truncate">{activePhoto.name}</div>
                   <FieldSlider
                     label="缩放"
                     min={100}
@@ -506,7 +510,7 @@ export default function App() {
                       format={(v) => (v / 100).toFixed(2)}
                     />
                     <div className="field-row">
-                      <Label className="text-xs text-[color:var(--color-muted)]">光色</Label>
+                      <Label className="text-xs text-[color:var(--muted)]">光色</Label>
                       <div className="flex items-center gap-2">
                         <input
                           className="color-swatch"
@@ -514,7 +518,7 @@ export default function App() {
                           value={state.lightColor}
                           onChange={(e) => patch({ lightColor: e.target.value })}
                         />
-                        <span className="mono text-[color:var(--color-muted)]">
+                        <span className="mono text-[color:var(--muted)]">
                           {state.lightColor.toUpperCase()}
                         </span>
                       </div>
@@ -646,8 +650,8 @@ export default function App() {
                 <Button className="w-full mt-2" variant="primary" onPress={onExport} isDisabled={!photos.length || busy}>
                   {busy ? "导出中…" : "导出图片"}
                 </Button>
-                <div className="text-[11px] text-[color:var(--color-muted)] mt-3 leading-relaxed">
-                  当前主题预览：背景 {th.bg} · 文字 {th.ink} · 强调 {th.accent}
+                <div className="text-[11px] text-[color:var(--muted)] mt-3 leading-relaxed">
+                  当前拼贴主题：背景 {th.bg} · 文字 {th.ink} · 强调 {th.accent}
                 </div>
               </div>
             </Tabs.Panel>
@@ -655,11 +659,11 @@ export default function App() {
         </aside>
 
         <section className="stage" aria-label="拼贴预览">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-[color:var(--color-rule)]">
-            <div className="text-xs text-[color:var(--color-muted)]">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-[color:var(--border)]">
+            <div className="text-xs text-[color:var(--muted)]">
               {LAYOUTS.find((l) => l.id === state.layout)?.name || state.layout} · {state.ratio} · {state.theme}
             </div>
-            <div className="text-[11px] font-mono text-[color:var(--color-muted)]">
+            <div className="text-[11px] font-mono text-[color:var(--muted)]">
               {size.w}×{size.h}
             </div>
           </div>
@@ -672,7 +676,7 @@ export default function App() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-[#1c1b18] border border-[color:var(--color-rule)] px-4 py-2 text-sm text-[color:var(--color-ink)] shadow-lg">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-[color:var(--overlay)] border border-[color:var(--border)] px-4 py-2 text-sm text-[color:var(--foreground)] shadow-lg">
           {toast}
         </div>
       )}
