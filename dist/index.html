@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>光房拼贴 — Collage Lab</title>
+  <link rel="stylesheet" crossorigin href="./assets/index-dcLM4ped.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">光房</span>
+        <span class="brand-sub">Collage Lab</span>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" id="btn-undo" class="btn btn-ghost" disabled title="撤销上一步（Ctrl+Z）">撤销</button>
+        <button type="button" id="btn-redo" class="btn btn-ghost" disabled title="重做下一步（Ctrl+Shift+Z）">重做</button>
+        <button type="button" id="btn-shuffle" class="btn btn-ghost" title="随机排列照片顺序">打乱</button>
+        <button type="button" id="btn-save-settings" class="btn btn-ghost" title="记住当前设置">记住设置</button>
+        <button type="button" id="btn-export" class="btn btn-primary" disabled>导出 JPG</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="rail" id="rail">
+        <nav class="rail-tabs" role="tablist" aria-label="设置分区">
+          <button type="button" class="rail-tab is-active" data-tab="photos" role="tab" aria-selected="true" aria-controls="tab-photos">照片</button>
+          <button type="button" class="rail-tab" data-tab="look" role="tab" aria-selected="false" aria-controls="tab-look">外观</button>
+          <button type="button" class="rail-tab" data-tab="text" role="tab" aria-selected="false" aria-controls="tab-text">文字</button>
+          <button type="button" class="rail-tab" data-tab="export" role="tab" aria-selected="false" aria-controls="tab-export">导出</button>
+        </nav>
+
+        <div class="preset-panel" id="preset-panel" aria-label="出图预设">
+          <div class="preset-panel-head">
+            <span class="preset-label">预设</span>
+            <span class="preset-hint">分组折叠 · 一键套用布局 / 比例 / 质感</span>
+            <button type="button" id="btn-toggle-presets" class="btn btn-ghost btn-sm" aria-expanded="true">收起</button>
+          </div>
+          <div id="preset-groups"></div>
+        </div>
+
+        <!-- 照片 -->
+        <div class="tab-pane is-active" id="tab-photos" role="tabpanel">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>选择照片</h2>
+              <div class="panel-actions">
+                <label class="btn btn-ghost btn-sm" for="file-input">选择图片</label>
+                <button type="button" id="btn-clear" class="btn btn-ghost btn-sm" disabled>清空</button>
+              </div>
+            </div>
+            <input type="file" id="file-input" accept="image/*" multiple hidden />
+            <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="拖入或选择照片">
+              <div class="dropzone-inner">
+                <span class="dropzone-icon" aria-hidden="true">◎</span>
+                <p class="dropzone-title">拖入照片，或点击选择</p>
+                <p class="dropzone-hint">支持多选 · 照片仅在本机浏览器中处理</p>
+              </div>
+            </div>
+            <div class="photo-summary" id="photo-summary" hidden>
+              <span id="photo-count">0 张照片</span>
+              <span id="photo-size-summary">—</span>
+            </div>
+            <div id="filmstrip" class="filmstrip" hidden></div>
+            <div class="film-actions" id="film-actions" hidden>
+              <button type="button" id="btn-sort-name" class="btn btn-ghost btn-sm">按文件名排序</button>
+              <button type="button" id="btn-reset-crops" class="btn btn-ghost btn-sm">重置全部裁剪</button>
+            </div>
+          </section>
+
+          <section class="panel" id="photo-edit-panel" hidden>
+            <div class="panel-head">
+              <h2>编辑当前照片</h2>
+              <span class="panel-tag mono" id="active-photo-label">—</span>
+            </div>
+
+            <div class="mode-switch" role="tablist" aria-label="编辑模式">
+              <button type="button" class="mode-btn is-active" data-mode="crop" role="tab">裁剪</button>
+              <button type="button" class="mode-btn" data-mode="reorder" role="tab">排序</button>
+            </div>
+
+            <div class="edit-body" id="edit-crop">
+              <div class="control-block crop-row">
+                <span class="field-label">缩放</span>
+                <div class="stepper">
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-zoom-out" aria-label="缩小">−</button>
+                  <span class="stepper-value mono" id="zoom-value">1.00×</span>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-zoom-in" aria-label="放大">＋</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-crop-reset">重置</button>
+                </div>
+              </div>
+              <div class="control-block">
+                <label class="field-label" for="rng-zoom">缩放滑杆</label>
+                <input type="range" id="rng-zoom" min="100" max="300" value="100" step="1" />
+              </div>
+              <div class="control-block">
+                <label class="field-label" for="rng-ox">水平偏移</label>
+                <input type="range" id="rng-ox" min="-100" max="100" value="0" step="1" />
+              </div>
+              <div class="control-block">
+                <label class="field-label" for="rng-oy">垂直偏移</label>
+                <input type="range" id="rng-oy" min="-100" max="100" value="0" step="1" />
+              </div>
+              <p class="hint">预览：Ctrl+滚轮缩放视图；空格/中键/Alt+拖拽平移视口。滚轮缩放照片；Shift+滚轮缩放当前图。</p>
+            </div>
+
+            <div class="edit-body" id="edit-reorder" hidden>
+              <div class="control-block">
+                <span class="field-label">调整顺序</span>
+                <div class="stepper">
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-move-left">← 前移</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-move-right">后移 →</button>
+                </div>
+              </div>
+              <div class="control-block">
+                <span class="field-label">也可在下方胶片上拖拽调整</span>
+                <div class="filmstrip filmstrip-sortable" id="filmstrip-sort"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 外观 -->
+        <div class="tab-pane" id="tab-look" role="tabpanel" hidden>
+          <section class="panel">
+            <div class="panel-head"><h2>布局</h2></div>
+            <div class="layout-grid" id="layout-grid" role="radiogroup" aria-label="拼贴布局"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>画布</h2></div>
+            <div class="control-block">
+              <label class="field-label" for="sel-ratio">输出比例</label>
+              <select id="sel-ratio" class="field">
+                <option value="1:1">1:1 正方形</option>
+                <option value="4:5">4:5 纵长（IG）</option>
+                <option value="3:4">3:4 纵长</option>
+                <option value="9:16">9:16 全屏竖版</option>
+                <option value="9:19.5">9:19.5 手机壁纸</option>
+                <option value="16:9">16:9 横版</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="sel-theme">主题</label>
+              <select id="sel-theme" class="field">
+                <option value="dark">暗色</option>
+                <option value="light">亮色</option>
+                <option value="paper">纸张</option>
+                <option value="sepia">深褐</option>
+                <option value="midnight">午夜</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="sel-cols">列数</label>
+              <select id="sel-cols" class="field">
+                <option value="auto" selected>自动</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="sel-bg">背景</label>
+              <select id="sel-bg" class="field">
+                <option value="solid" selected>纯色主题底</option>
+                <option value="edge">铺满（去边距）</option>
+                <option value="ghost">首图淡影底</option>
+                <option value="jacket">专辑封面风</option>
+                <option value="glass">玻璃面板</option>
+              </select>
+            </div>
+            <div class="control-block" id="ghost-strength-block" hidden>
+              <label class="field-label" for="rng-ghost">淡影浓度 <span class="mono" id="ghost-value">0.35</span></label>
+              <input type="range" id="rng-ghost" min="5" max="60" value="35" />
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>质感与光</h2></div>
+            <div class="control-block">
+              <label class="field-label" for="sel-gap">间距</label>
+              <select id="sel-gap" class="field">
+                <option value="none">无缝</option>
+                <option value="narrow">窄</option>
+                <option value="standard" selected>标准</option>
+                <option value="wide">宽</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="sel-radius">圆角</label>
+              <select id="sel-radius" class="field">
+                <option value="none">直角</option>
+                <option value="soft" selected>轻微</option>
+                <option value="medium">标准</option>
+                <option value="large">大圆角</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="sel-grain">质感</label>
+              <select id="sel-grain" class="field">
+                <option value="none">无</option>
+                <option value="grain">颗粒</option>
+                <option value="paper">纸纹</option>
+                <option value="both" selected>纸 + 颗粒</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="sel-light">背景光</label>
+              <select id="sel-light" class="field">
+                <option value="none" selected>无</option>
+                <option value="diag-l">斜光（左上）</option>
+                <option value="diag-r">斜光（右上）</option>
+                <option value="spot">聚光</option>
+                <option value="vignette">暗角</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="rng-light">光效强度 <span class="mono" id="light-value">0.45</span></label>
+              <input type="range" id="rng-light" min="0" max="100" value="45" />
+            </div>
+            <div class="control-block" id="block-light-color">
+              <label class="field-label" for="inp-light-color">光线颜色</label>
+              <div class="light-color-row">
+                <input type="color" id="inp-light-color" value="#fff5e0" style="width:42px;height:32px;border:1px solid var(--rule);border-radius:6px;background:transparent;cursor:pointer;padding:2px" />
+                <span class="mono panel-tag" id="light-color-hex">#FFF5E0</span>
+              </div>
+              <div class="light-presets" id="light-presets">
+                <button type="button" class="light-swatch is-active" data-color="#fff5e0" title="暖白（日光）" style="background:#fff5e0"></button>
+                <button type="button" class="light-swatch" data-color="#ffd6a0" title="金色（黄昏）" style="background:#ffd6a0"></button>
+                <button type="button" class="light-swatch" data-color="#ff9a5c" title="橙色（夕照）" style="background:#ff9a5c"></button>
+                <button type="button" class="light-swatch" data-color="#ff6b6b" title="红色（舞台）" style="background:#ff6b6b"></button>
+                <button type="button" class="light-swatch" data-color="#c084fc" title="紫色（霓虹）" style="background:#c084fc"></button>
+                <button type="button" class="light-swatch" data-color="#60a5fa" title="蓝色（冷光）" style="background:#60a5fa"></button>
+                <button type="button" class="light-swatch" data-color="#34d399" title="绿色（荧光）" style="background:#34d399"></button>
+                <button type="button" class="light-swatch" data-color="#f0f0f0" title="纯白（摄影灯）" style="background:#f0f0f0"></button>
+                <button type="button" class="light-swatch" data-color="#1a1a2e" title="深蓝（夜景）" style="background:#1a1a2e"></button>
+                <button type="button" class="light-swatch" data-color="#ffffff" title="纯白（无色）" style="background:#ffffff"></button>
+              </div>
+              <p class="hint">选择光线颜色，或点击预设快速套用常用灯光色。</p>
+            </div>
+            <div class="control-block checkbox-row">
+            </div>
+          </section>
+        </div>
+
+        <!-- 文字 -->
+        <div class="tab-pane" id="tab-text" role="tabpanel" hidden>
+          <section class="panel">
+            <div class="panel-head">
+              <h2>文字</h2>
+              <div class="panel-actions">
+                <button type="button" id="btn-text-remember" class="btn btn-ghost btn-sm">记住</button>
+                <button type="button" id="btn-text-recall" class="btn btn-ghost btn-sm">调用</button>
+                <button type="button" id="btn-text-reset" class="btn btn-ghost btn-sm">重置</button>
+              </div>
+            </div>
+            <div class="control-block" id="block-text-style">
+              <label class="field-label" for="sel-text-style">文字版式</label>
+              <select id="sel-text-style" class="field">
+                <option value="head-footer" selected>标题左上 + 页脚居中</option>
+                <option value="center-type">中央大字 + 页脚</option>
+                <option value="bottom-bar">下部条带（手账风）</option>
+                <option value="edition">版画式编号栏</option>
+              </select>
+              <p class="hint block-note">短视频 / 视频面板 / 播放器 / 大字底图 等布局会锁定或忽略此版式。</p>
+            </div>
+            <div class="control-block" id="block-title">
+              <label class="field-label" for="inp-title">标题（大）</label>
+              <input type="text" id="inp-title" class="field" placeholder="Enter 可换行，最多 3 行" maxlength="60" />
+            </div>
+            <div class="control-block checkbox-row" id="block-glow">
+              <label class="checkbox">
+                <input type="checkbox" id="chk-glow" />
+                <span>标题发光 GLOW</span>
+              </label>
+            </div>
+            <div class="control-block" id="block-subtitle">
+              <label class="field-label" for="inp-subtitle">副标题（小）</label>
+              <input type="text" id="inp-subtitle" class="field" placeholder="右上角小字" maxlength="40" />
+              <p class="hint block-note" hidden></p>
+            </div>
+            <div class="control-block" id="block-footer">
+              <label class="field-label" for="inp-footer">页脚（居中）</label>
+              <input type="text" id="inp-footer" class="field" placeholder="例如：Through the Lens" maxlength="40" />
+              <p class="hint block-note" hidden></p>
+            </div>
+            <div class="control-block" id="block-subfooter">
+              <label class="field-label" for="inp-subfooter">副页脚（小）</label>
+              <input type="text" id="inp-subfooter" class="field" placeholder="例如：© 2026" maxlength="40" />
+              <p class="hint block-note" hidden></p>
+            </div>
+            <div class="control-block" id="block-font">
+              <label class="field-label" for="sel-font">标题书体</label>
+              <select id="sel-font" class="field">
+                <option value="gothic">哥特 · 现代</option>
+                <option value="mincho">明朝 · 安静</option>
+                <option value="rounded">圆体 · 柔和</option>
+                <option value="display">极粗 · 杂志</option>
+                <option value="hand">手写风</option>
+                <option value="script">笔迹感（拉丁）</option>
+              </select>
+            </div>
+            <div class="control-block" id="block-font-sub">
+              <label class="field-label" for="sel-font-sub">副文书体</label>
+              <select id="sel-font-sub" class="field">
+                <option value="gothic" selected>哥特 · 现代</option>
+                <option value="rounded">圆体 · 柔和</option>
+                <option value="mincho">明朝 · 安静</option>
+                <option value="hand">手写风</option>
+              </select>
+              <p class="hint block-note" hidden></p>
+            </div>
+          </section>
+
+          <section class="panel" id="panel-ui-sim">
+            <div class="panel-head">
+              <h2>界面模拟（YT / 播放器）</h2>
+              <span class="panel-tag" id="ui-sim-tag"></span>
+            </div>
+            <div class="control-block checkbox-row" id="block-subs">
+              <label class="checkbox"><input type="checkbox" id="chk-subs" /><span>订阅按钮显示「已订阅」</span></label>
+            </div>
+            <div class="control-block checkbox-row" id="block-autoplay">
+              <label class="checkbox"><input type="checkbox" id="chk-autoplay" /><span>自动播放为「开」</span></label>
+            </div>
+            <div class="control-block checkbox-row" id="block-live">
+              <label class="checkbox"><input type="checkbox" id="chk-live" /><span>显示「● 直播」</span></label>
+            </div>
+            <div class="control-block checkbox-row" id="block-playing">
+              <label class="checkbox"><input type="checkbox" id="chk-playing" checked /><span>播放按钮为「播放中」</span></label>
+            </div>
+            <div class="control-block checkbox-row" id="block-liked">
+              <label class="checkbox"><input type="checkbox" id="chk-liked" /><span>心形为「已点赞」</span></label>
+            </div>
+            <div class="control-block checkbox-row" id="block-counts">
+              <label class="checkbox"><input type="checkbox" id="chk-counts" /><span>显示图标旁数字（评论/转发等）</span></label>
+            </div>
+            <div class="control-block" id="block-yt-likes">
+              <label class="field-label" for="inp-yt-likes">点赞数字</label>
+              <input type="text" id="inp-yt-likes" class="field" maxlength="12" placeholder="例如：1.2万（留空不显示）" />
+              <p class="hint block-note" hidden></p>
+            </div>
+            <div class="control-block" id="block-yt-comments">
+              <label class="field-label" for="inp-yt-comments">评论数字 / 直播文案</label>
+              <input type="text" id="inp-yt-comments" class="field" maxlength="12" placeholder="例如：486 或 直播" />
+            </div>
+            <div class="control-block" id="block-yt-reposts">
+              <label class="field-label" for="inp-yt-reposts">转发数字</label>
+              <input type="text" id="inp-yt-reposts" class="field" maxlength="12" placeholder="例如：2048（留空不显示）" />
+            </div>
+            <div class="control-block" id="block-icon-theme">
+              <label class="field-label" for="sel-icon-theme">图标颜色主题</label>
+              <select id="sel-icon-theme" class="field">
+                <option value="twitter" selected>推特风（白描边 / 红心）</option>
+                <option value="blue">推特蓝强调</option>
+                <option value="mono">单色白</option>
+                <option value="pink">粉调点赞</option>
+                <option value="accent">跟随主题强调色</option>
+              </select>
+              <p class="hint block-note" hidden></p>
+            </div>
+          </section>
+
+          <section class="panel" id="panel-ig-content">
+            <div class="panel-head">
+              <h2>IG 动态墙内容</h2>
+              <span class="panel-tag" id="ig-content-tag"></span>
+            </div>
+            <div class="control-block" id="block-ig-brand">
+              <label class="field-label" for="inp-ig-brand">顶栏品牌名</label>
+              <input type="text" id="inp-ig-brand" class="field" maxlength="24" placeholder="例如：光房 / Totegram" />
+            </div>
+            <div class="control-block" id="block-ig-user">
+              <label class="field-label" for="inp-ig-user">用户名（标题）</label>
+              <input type="text" id="inp-ig-user" class="field" maxlength="28" placeholder="例如：rossi" />
+            </div>
+            <div class="control-block" id="block-ig-likes">
+              <label class="field-label" for="inp-ig-likes">点赞数</label>
+              <input type="text" id="inp-ig-likes" class="field" maxlength="12" placeholder="3.9万" />
+            </div>
+            <div class="control-block" id="block-ig-comments">
+              <label class="field-label" for="inp-ig-comments">评论数</label>
+              <input type="text" id="inp-ig-comments" class="field" maxlength="12" placeholder="2.2千" />
+            </div>
+            <div class="control-block" id="block-ig-reposts">
+              <label class="field-label" for="inp-ig-reposts">转发数</label>
+              <input type="text" id="inp-ig-reposts" class="field" maxlength="12" placeholder="1.5千" />
+            </div>
+            <div class="control-block" id="block-ig-shares">
+              <label class="field-label" for="inp-ig-shares">分享数</label>
+              <input type="text" id="inp-ig-shares" class="field" maxlength="12" placeholder="793" />
+            </div>
+            <div class="control-block" id="block-ig-caption">
+              <label class="field-label" for="inp-ig-caption">文案（跟在用户名后）</label>
+              <input type="text" id="inp-ig-caption" class="field" maxlength="40" placeholder="冒険の記録" />
+            </div>
+          </section>
+
+          <section class="panel" id="panel-player-content">
+            <div class="panel-head">
+              <h2>播放器封面内容</h2>
+              <span class="panel-tag" id="player-content-tag"></span>
+            </div>
+            <div class="control-block" id="block-player-header">
+              <label class="field-label" for="inp-player-header">顶栏标题</label>
+              <input type="text" id="inp-player-header" class="field" maxlength="40" placeholder="WutheringWaves" />
+            </div>
+            <div class="control-block" id="block-player-track">
+              <label class="field-label" for="inp-player-track">曲名</label>
+              <input type="text" id="inp-player-track" class="field" maxlength="40" placeholder="Dasvidaniya" />
+            </div>
+            <div class="control-block" id="block-player-artist">
+              <label class="field-label" for="inp-player-artist">歌手 / 专辑</label>
+              <input type="text" id="inp-player-artist" class="field" maxlength="40" placeholder="WutheringWaves" />
+            </div>
+            <div class="control-block" id="block-player-time">
+              <label class="field-label">进度时间</label>
+              <div class="stepper">
+                <input type="text" id="inp-player-t1" class="field" maxlength="8" placeholder="0:56" style="flex:1" />
+                <input type="text" id="inp-player-t2" class="field" maxlength="8" placeholder="-4:34" style="flex:1" />
+              </div>
+              <p class="hint">进度条 = 左 ÷（左+右）。右侧以「-」表示剩余时长；也可填总时长（如 5:30）。</p>
+            </div>
+            <div class="control-block" id="block-player-color">
+              <label class="field-label">播放钮颜色 · RGB 取色盘</label>
+              <div class="color-ring-wrap">
+                <canvas id="color-ring" width="160" height="160"></canvas>
+                <div class="color-ring-inner" id="color-ring-inner">
+                  <div class="color-ring-swatch" id="color-ring-swatch"></div>
+                  <span class="color-ring-hex mono" id="color-ring-hex">#7C3AED</span>
+                </div>
+              </div>
+              <div class="rgb-readout">
+                <span class="rgb-readout-item"><b>R</b> <span id="rgbo-r">124</span></span>
+                <span class="rgb-readout-item"><b>G</b> <span id="rgbo-g">58</span></span>
+                <span class="rgb-readout-item"><b>B</b> <span id="rgbo-b">237</span></span>
+              </div>
+              <div class="stepper" style="margin-top:8px">
+                <input type="color" id="inp-player-color" value="#7c3aed" style="width:42px;height:32px;border:1px solid var(--rule);border-radius:6px;background:transparent;cursor:pointer;padding:2px" />
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-eyedrop">在封面图上取色</button>
+                <span class="mono panel-tag" id="eyedrop-tag">点击预览中的颜色</span>
+              </div>
+              <p class="hint">点击圆环选择颜色，或在封面图上单击取色。</p>
+            </div>
+            <div class="control-block" id="block-player-icons">
+              <span class="field-label">自定义播控图标（PNG / SVG，可选）</span>
+              <p class="hint" style="margin-bottom:8px">优先加载 <span class="mono">icon/</span> 目录下的 Lucide SVG（shuffle / skip-back / skip-forward / repeat / heart / waypoints / list-chevrons-up-down）。也可上传 PNG/SVG 覆盖；透明底更佳。</p>
+              <div class="icon-upload-grid">
+                <label class="icon-upload">随机<input type="file" id="icon-shuffle" accept="image/*,.svg" hidden /></label>
+                <label class="icon-upload">上一首<input type="file" id="icon-prev" accept="image/*,.svg" hidden /></label>
+                <label class="icon-upload">播放/暂停<input type="file" id="icon-play" accept="image/*,.svg" hidden /></label>
+                <span class="hint" style="grid-column:1/-1;margin:0">也支持 <span class="mono">icon/play.svg</span>、<span class="mono">icon/pause.svg</span></span>
+                <label class="icon-upload">下一首<input type="file" id="icon-next" accept="image/*,.svg" hidden /></label>
+                <label class="icon-upload">循环<input type="file" id="icon-repeat" accept="image/*,.svg" hidden /></label>
+                <label class="icon-upload">爱心<input type="file" id="icon-heart" accept="image/*,.svg" hidden /></label>
+              </div>
+              <div class="stepper" style="margin-top:8px">
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-reset-icons">恢复内置图标</button>
+                <span class="mono panel-tag" id="icon-custom-tag">内置</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 导出 -->
+        <div class="tab-pane" id="tab-export" role="tabpanel" hidden>
+          <section class="panel">
+            <div class="panel-head"><h2>导出与出片预检</h2></div>
+            <div class="control-block">
+              <label class="field-label" for="sel-export">输出尺寸</label>
+              <select id="sel-export" class="field">
+                <option value="x">X / 社交（长边 ≤4096）</option>
+                <option value="ig" selected>Instagram（宽 1080）</option>
+                <option value="original">原寸（按源图，不盲放大）</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="sel-export-format">格式</label>
+              <select id="sel-export-format" class="field">
+                <option value="jpg" selected>JPG（社交/压缩）</option>
+                <option value="png">PNG（归档/无损）</option>
+              </select>
+            </div>
+            <div class="control-block">
+              <label class="field-label" for="inp-max-mb">目标体积上限（MB，空=不限）</label>
+              <input type="number" id="inp-max-mb" class="field" min="0" step="0.1" placeholder="例如 2.0" />
+            </div>
+            <div class="control-block checkbox-row">
+              <label class="checkbox">
+                <input type="checkbox" id="chk-credit" />
+                <span>角落标注「光房拼贴」</span>
+              </label>
+            </div>
+
+            <div class="preflight" id="preflight" aria-live="polite">
+              <div class="export-meta">
+                <span class="meta-label">输出尺寸</span>
+                <span class="meta-value mono" id="meta-size">—</span>
+              </div>
+              <div class="export-meta">
+                <span class="meta-label">格式 / 体积</span>
+                <span class="meta-value mono" id="meta-format">—</span>
+              </div>
+              <div class="export-meta">
+                <span class="meta-label">源图判断</span>
+                <span class="meta-value mono" id="meta-upscale">—</span>
+              </div>
+              <div class="export-meta">
+                <span class="meta-label">文件名</span>
+                <span class="meta-value mono" id="meta-filename">—</span>
+              </div>
+              <div class="export-meta">
+                <span class="meta-label">照片</span>
+                <span class="meta-value mono" id="meta-count">0 张</span>
+              </div>
+              <div class="export-meta">
+                <span class="meta-label">上次出片</span>
+                <span class="meta-value mono" id="meta-last">—</span>
+              </div>
+            </div>
+
+            <button type="button" id="btn-export-2" class="btn btn-primary btn-block" disabled>下载 JPG</button>
+            <p class="hint">导出与预览共用同一绘制路径（不含裁剪描边）。JPG 超限时按质量降档；「原寸」会按源图边长估算，避免盲目放大。照片仅在本机处理。</p>
+          </section>
+        </div>
+
+        <p class="rail-note">本地调试版 · 后续可直接套桌面壳（Tauri / Electron）</p>
+      </aside>
+
+      <section class="stage" aria-label="拼贴预览">
+        <div class="canvas-toolbar" aria-label="画布工具">
+          <span class="canvas-mode" id="canvas-mode">预览模式</span>
+          <div class="canvas-toolbar-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-fit-view">适应窗口</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-reset-all">全部重置</button>
+          </div>
+        </div>
+        <div class="stage-inner">
+          <div id="preview-wrap" class="preview-wrap">
+            <canvas id="preview" width="800" height="800"></canvas>
+            <div id="empty-state" class="empty-state">
+              <div class="empty-frame" aria-hidden="true">
+                <span class="empty-sprocket"></span>
+                <span class="empty-sprocket"></span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <footer class="stage-bar">
+          <span id="status-text" class="status" aria-live="polite">等待照片</span>
+          <div class="stage-zoom" id="stage-zoom" hidden>
+            <span class="zoom-label">照片</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="stage-zoom-out" aria-label="缩小照片">−</button>
+            <span class="mono stage-zoom-val" id="stage-zoom-val">100%</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="stage-zoom-in" aria-label="放大照片">＋</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="stage-zoom-reset">重置</button>
+            <span class="zoom-sep" aria-hidden="true">|</span>
+            <span class="zoom-label">视图</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="view-zoom-out" aria-label="缩小视图">−</button>
+            <span class="mono stage-zoom-val" id="view-zoom-val">100%</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="view-zoom-in" aria-label="放大视图">＋</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="view-zoom-reset">1:1</button>
+          </div>
+          <span class="stage-bar-right mono" id="status-detail"></span>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
