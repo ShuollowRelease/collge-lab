@@ -314,6 +314,79 @@
             </div>
           </section>
 
+          <section class="panel" id="panel-signature">
+            <div class="panel-head">
+              <h2>艺术签名</h2>
+              <span class="panel-tag" id="sig-tag">可拖拽 · 可导出</span>
+            </div>
+            <div class="control-block checkbox-row" id="block-sig-enabled">
+              <label class="checkbox">
+                <input type="checkbox" id="chk-sig-enabled" />
+                <span>启用签名</span>
+              </label>
+            </div>
+            <div class="control-block" id="block-sig-text">
+              <label class="field-label" for="inp-sig-text">签名内容</label>
+              <input type="text" id="inp-sig-text" class="field" placeholder="你的签名" maxlength="20" />
+            </div>
+            <div class="control-block" id="block-sig-font">
+              <label class="field-label" for="sel-sig-font">书体</label>
+              <select id="sel-sig-font" class="field">
+                <option value="hand" selected>手写</option>
+                <option value="xingshu">行书</option>
+                <option value="script">英文花体</option>
+                <option value="sans">现代无衬线</option>
+              </select>
+            </div>
+            <div class="control-block" id="block-sig-color">
+              <label class="field-label">颜色</label>
+              <div class="light-presets" id="sig-presets">
+                <button type="button" class="light-swatch sig-swatch is-active" data-color="#1c1b18" title="墨黑" style="background:#1c1b18"></button>
+                <button type="button" class="light-swatch sig-swatch" data-color="#C23B22" title="朱红" style="background:#C23B22"></button>
+                <button type="button" class="light-swatch sig-swatch" data-color="#C9A227" title="鎏金" style="background:#C9A227"></button>
+                <button type="button" class="light-swatch sig-swatch" data-color="#A8A8A8" title="银灰" style="background:#A8A8A8"></button>
+                <button type="button" class="light-swatch sig-swatch" data-color="#2c5f8a" title="靛青" style="background:#2c5f8a"></button>
+                <button type="button" class="light-swatch sig-swatch" data-color="#FFFFFF" title="纯白" style="background:#FFFFFF"></button>
+              </div>
+            </div>
+            <div class="control-block" id="block-sig-effect">
+              <label class="field-label" for="sel-sig-effect">效果</label>
+              <select id="sel-sig-effect" class="field">
+                <option value="solid" selected>纯色</option>
+                <option value="gold">金色渐变</option>
+                <option value="silver">银色渐变</option>
+                <option value="emboss">描边浮雕</option>
+              </select>
+            </div>
+            <div class="control-block" id="block-sig-pos">
+              <label class="field-label">位置</label>
+              <div class="sig-pos-grid" id="sig-pos-grid" role="group" aria-label="签名九宫格位置">
+                <button type="button" class="sig-pos-btn" data-pos="tl" title="左上">↖</button>
+                <button type="button" class="sig-pos-btn" data-pos="tc" title="中上">↑</button>
+                <button type="button" class="sig-pos-btn" data-pos="tr" title="右上">↗</button>
+                <button type="button" class="sig-pos-btn" data-pos="ml" title="左中">←</button>
+                <button type="button" class="sig-pos-btn" data-pos="mc" title="居中">●</button>
+                <button type="button" class="sig-pos-btn" data-pos="mr" title="右中">→</button>
+                <button type="button" class="sig-pos-btn" data-pos="bl" title="左下">↙</button>
+                <button type="button" class="sig-pos-btn is-active" data-pos="bc" title="中下">↓</button>
+                <button type="button" class="sig-pos-btn" data-pos="br" title="右下">↘</button>
+              </div>
+              <p class="hint">也可在画布上直接拖拽签名；双击签名可编辑。</p>
+            </div>
+            <div class="control-block" id="block-sig-size">
+              <label class="field-label" for="rng-sig-size">字号 <span class="mono" id="sig-size-value">12%</span></label>
+              <input type="range" id="rng-sig-size" min="4" max="25" value="12" step="1" />
+            </div>
+            <div class="control-block" id="block-sig-rotate">
+              <label class="field-label" for="rng-sig-rotate">旋转 <span class="mono" id="sig-rotate-value">0°</span></label>
+              <input type="range" id="rng-sig-rotate" min="-45" max="45" value="0" step="1" />
+            </div>
+            <div class="control-block" id="block-sig-opacity">
+              <label class="field-label" for="rng-sig-opacity">不透明度 <span class="mono" id="sig-opacity-value">90%</span></label>
+              <input type="range" id="rng-sig-opacity" min="20" max="100" value="90" step="1" />
+            </div>
+          </section>
+
           <section class="panel" id="panel-ui-sim">
             <div class="panel-head">
               <h2>界面模拟（YT / 播放器）</h2>

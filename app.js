@@ -52,6 +52,35 @@
     script: { display: '"Segoe Script", "Brush Script MT", cursive', weight: "400" },
   };
 
+  const SIG_FONTS = {
+    hand: '"Xingkai SC", "STXingkai", "Segoe Print", "Comic Sans MS", cursive',
+    xingshu: '"STXingkai", "Xingkai SC", "Kaiti SC", "KaiTi", "STKaiti", cursive',
+    script: '"Segoe Script", "Brush Script MT", "Apple Chancery", cursive',
+    sans: '"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+  };
+
+  const SIG_POS = {
+    tl: [0, 0], tc: [1, 0], tr: [2, 0],
+    ml: [0, 1], mc: [1, 1], mr: [2, 1],
+    bl: [0, 2], bc: [1, 2], br: [2, 2],
+  };
+
+  function defaultSignature() {
+    return {
+      enabled: false,
+      text: "",
+      font: "hand",
+      colorMode: "solid",
+      color: "#1c1b18",
+      pos: "bc",
+      x: 0.5,
+      y: 0.88,
+      size: 0.12,
+      rotate: 0,
+      opacity: 0.9,
+    };
+  }
+
   const SETTINGS_KEY = "glow-collage-settings-v2";
   const TEXT_MEMORY_KEY = "glow-collage-text-v2";
   const SAMPLE_SRC = "text.jpg";
@@ -100,6 +129,7 @@
     credit: false,
     activeId: null,
     editMode: "crop",
+    signature: defaultSignature(),
   };
 
   let previewW = 800;
@@ -107,6 +137,7 @@
   let lastSlots = [];
   let toastTimer = null;
   let dragPan = null;
+  let dragSig = null;
   let dragSortId = null;
 
   const els = {};
@@ -1319,6 +1350,131 @@
     else if (state.volumeBar && state.layout !== "yt-short" && state.layout !== "yt-panel") {
       drawPlayerChrome(c, W, H, th, fs, fsw);
     }
+  }
+
+  /* ——— 艺术签名 ——— */
+  function sigFontStack(key) {
+    return SIG_FONTS[key] || SIG_FONTS.hand;
+  }
+
+  function sigFontSize(W) {
+    const sig = state.signature || defaultSignature();
+    return Math.max(12, Math.round(W * (Number(sig.size) || 0.12)));
+  }
+
+  function measureSignature(c, W) {
+    const sig = state.signature || defaultSignature();
+    const text = String(sig.text || "").trim();
+    if (!text) return null;
+    const fontSize = sigFontSize(W);
+    c.save();
+    c.font = `500 ${fontSize}px ${sigFontStack(sig.font)}`;
+    const tw = Math.max(fontSize * 0.5, c.measureText(text).width);
+    c.restore();
+    return { text, fontSize, tw, th: fontSize * 1.25 };
+  }
+
+  function signatureBounds(c, W, H) {
+    const m = measureSignature(c, W);
+    if (!m) return null;
+    const sig = state.signature;
+    return {
+      cx: (Number(sig.x) || 0) * W,
+      cy: (Number(sig.y) || 0) * H,
+      w: m.tw,
+      h: m.th,
+      rotate: ((Number(sig.rotate) || 0) * Math.PI) / 180,
+      fontSize: m.fontSize,
+      text: m.text,
+    };
+  }
+
+  function hitSignature(x, y, c, W, H) {
+    const b = signatureBounds(c, W, H);
+    if (!b) return false;
+    const dx = x - b.cx;
+    const dy = y - b.cy;
+    const cos = Math.cos(-b.rotate);
+    const sin = Math.sin(-b.rotate);
+    const lx = dx * cos - dy * sin;
+    const ly = dx * sin + dy * cos;
+    const pad = Math.max(10, b.fontSize * 0.2);
+    return Math.abs(lx) <= b.w / 2 + pad && Math.abs(ly) <= b.h / 2 + pad;
+  }
+
+  function setSignatureAnchor(posKey) {
+    const W = previewW;
+    const H = previewH;
+    const sig = state.signature;
+    const cell = SIG_POS[posKey] || SIG_POS.bc;
+    const short = Math.min(W, H);
+    const pad = short * 0.04;
+    const b = signatureBounds(els.ctx, W, H);
+    const halfW = b ? b.w / 2 : W * 0.06;
+    const halfH = b ? b.h / 2 : H * 0.04;
+    let x;
+    let y;
+    if (cell[0] === 0) x = pad + halfW;
+    else if (cell[0] === 2) x = W - pad - halfW;
+    else x = W / 2;
+    if (cell[1] === 0) y = pad + halfH;
+    else if (cell[1] === 2) y = H - pad - halfH;
+    else y = H / 2;
+    sig.pos = posKey;
+    sig.x = Math.max(0, Math.min(1, x / W));
+    sig.y = Math.max(0, Math.min(1, y / H));
+  }
+
+  function drawSignature(c, W, H) {
+    const sig = state.signature;
+    if (!sig || !sig.enabled) return;
+    const m = measureSignature(c, W);
+    if (!m) return;
+
+    const x = (Number(sig.x) || 0) * W;
+    const y = (Number(sig.y) || 0) * H;
+    const rotate = ((Number(sig.rotate) || 0) * Math.PI) / 180;
+    const opacity = Math.max(0.2, Math.min(1, Number(sig.opacity) || 0.9));
+    const fontSize = m.fontSize;
+    const text = m.text;
+
+    c.save();
+    c.translate(x, y);
+    c.rotate(rotate);
+    c.globalAlpha = opacity;
+    c.font = `500 ${fontSize}px ${sigFontStack(sig.font)}`;
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.lineJoin = "round";
+
+    const mode = sig.colorMode || "solid";
+    const color = sig.color || "#1c1b18";
+
+    if (mode === "gold" || mode === "silver") {
+      const stops =
+        mode === "gold"
+          ? ["#F5E6A8", "#C9A227", "#8B6914"]
+          : ["#F5F5F5", "#C0C0C0", "#707070"];
+      const g = c.createLinearGradient(-m.tw / 2, -fontSize / 2, m.tw / 2, fontSize / 2);
+      g.addColorStop(0, stops[0]);
+      g.addColorStop(0.5, stops[1]);
+      g.addColorStop(1, stops[2]);
+      c.fillStyle = g;
+      c.fillText(text, 0, 0);
+    } else if (mode === "emboss") {
+      c.lineWidth = Math.max(2, fontSize * 0.12);
+      c.strokeStyle = "rgba(0,0,0,0.55)";
+      c.strokeText(text, 0, 0);
+      c.lineWidth = Math.max(1, fontSize * 0.045);
+      c.strokeStyle = "rgba(255,255,255,0.35)";
+      c.strokeText(text, -fontSize * 0.015, -fontSize * 0.015);
+      c.fillStyle = color;
+      c.fillText(text, 0, 0);
+    } else {
+      c.fillStyle = color;
+      c.fillText(text, 0, 0);
+    }
+    c.restore();
   }
 
   function drawCenterType(c, W, H, th) {
@@ -2929,6 +3085,9 @@
       drawText(c, W, H, th);
     }
 
+    // 艺术签名：跟随用户开关，player / IG 也不强制关闭；画在文字上层
+    drawSignature(c, W, H);
+
     // 播放器 / IG 帖不叠加颗粒以外的品牌水印
     applyLight(c, W, H, th);
     applyTexture(c, W, H);
@@ -3738,6 +3897,7 @@
       subtitle: state.subtitle,
       footer: state.footer,
       subfooter: state.subfooter,
+      signature: { ...defaultSignature(), ...(state.signature || {}) },
     };
   }
 
@@ -3778,6 +3938,9 @@
       subtitle: s.subtitle ?? state.subtitle,
       footer: s.footer ?? state.footer,
       subfooter: s.subfooter ?? state.subfooter,
+      signature: s.signature
+        ? { ...defaultSignature(), ...(state.signature || {}), ...s.signature }
+        : state.signature,
     });
   }
 
@@ -3839,7 +4002,36 @@
     const lcE=$("inp-light-color"); if(lcE) lcE.value=state.lightColor||"#fff5e0";
     const lhE=$("light-color-hex"); if(lhE) lhE.textContent=(state.lightColor||"#fff5e0").toUpperCase();
     document.querySelectorAll(".light-swatch").forEach(sw=>sw.classList.toggle("is-active",sw.dataset.color===state.lightColor));
+    syncSignatureControls();
     renderLayoutOptions();
+  }
+
+  function syncSignatureControls() {
+    const sig = state.signature || defaultSignature();
+    if (!state.signature) state.signature = defaultSignature();
+    if (els.chkSigEnabled) els.chkSigEnabled.checked = !!sig.enabled;
+    if (els.inpSigText) els.inpSigText.value = sig.text || "";
+    if (els.selSigFont) els.selSigFont.value = sig.font || "hand";
+    if (els.selSigEffect) els.selSigEffect.value = sig.colorMode || "solid";
+    if (els.rngSigSize) {
+      els.rngSigSize.value = String(Math.round((Number(sig.size) || 0.12) * 100));
+      if (els.sigSizeValue) els.sigSizeValue.textContent = `${Math.round((Number(sig.size) || 0.12) * 100)}%`;
+    }
+    if (els.rngSigRotate) {
+      els.rngSigRotate.value = String(Math.round(Number(sig.rotate) || 0));
+      if (els.sigRotateValue) els.sigRotateValue.textContent = `${Math.round(Number(sig.rotate) || 0)}°`;
+    }
+    if (els.rngSigOpacity) {
+      els.rngSigOpacity.value = String(Math.round((Number(sig.opacity) || 0.9) * 100));
+      if (els.sigOpacityValue) els.sigOpacityValue.textContent = `${Math.round((Number(sig.opacity) || 0.9) * 100)}%`;
+    }
+    document.querySelectorAll(".sig-swatch").forEach((sw) => {
+      sw.classList.toggle("is-active", (sw.dataset.color || "").toLowerCase() === String(sig.color || "").toLowerCase());
+    });
+    const posKey = sig.pos || "bc";
+    document.querySelectorAll(".sig-pos-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.pos === posKey);
+    });
   }
 
   function saveSettings() {
@@ -4036,6 +4228,30 @@
         return;
       }
 
+      // —— 艺术签名拖拽（优先于照片裁剪） ——
+      if (state.signature && state.signature.enabled && String(state.signature.text || "").trim()) {
+        const spt = canvasPoint(e);
+        if (hitSignature(spt.x, spt.y, els.ctx, els.canvas.width, els.canvas.height)) {
+          e.preventDefault();
+          snapshotThrottled("签名拖拽");
+          dragSig = {
+            startX: spt.x,
+            startY: spt.y,
+            x0: Number(state.signature.x) || 0,
+            y0: Number(state.signature.y) || 0,
+            W: els.canvas.width,
+            H: els.canvas.height,
+          };
+          try {
+            canvas.setPointerCapture(e.pointerId);
+          } catch {
+            /* ignore */
+          }
+          canvas.classList.add("is-dragging-sig");
+          return;
+        }
+      }
+
       if (!state.photos.length || state.editMode !== "crop") return;
       const pt = canvasPoint(e);
       const idx = hitSlot(pt.x, pt.y, lastSlots);
@@ -4067,6 +4283,18 @@
         }
         return;
       }
+      if (dragSig) {
+        const pt = canvasPoint(e);
+        const s = state.signature;
+        if (s && dragSig.W && dragSig.H) {
+          s.x = Math.max(0, Math.min(1, dragSig.x0 + (pt.x - dragSig.startX) / dragSig.W));
+          s.y = Math.max(0, Math.min(1, dragSig.y0 + (pt.y - dragSig.startY) / dragSig.H));
+          s.pos = "";
+          document.querySelectorAll(".sig-pos-btn").forEach((btn) => btn.classList.remove("is-active"));
+          renderSoon();
+        }
+        return;
+      }
       if (!dragPan) return;
       const p = state.photos.find((x) => x.id === dragPan.id);
       if (!p) return;
@@ -4087,6 +4315,17 @@
         } catch {
           /* ignore */
         }
+        return;
+      }
+      if (dragSig) {
+        dragSig = null;
+        canvas.classList.remove("is-dragging-sig");
+        try {
+          canvas.releasePointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        render();
         return;
       }
       if (!dragPan) return;
@@ -4141,6 +4380,21 @@
 
     // 双击：在 1.0× 与 1.35× 之间切换该格照片
     canvas.addEventListener("dblclick", (e) => {
+      // 双击签名 → 聚焦输入框
+      if (state.signature && state.signature.enabled && String(state.signature.text || "").trim()) {
+        const spt = canvasPoint(e);
+        if (hitSignature(spt.x, spt.y, els.ctx, els.canvas.width, els.canvas.height)) {
+          e.preventDefault();
+          const textTab = document.querySelector('.rail-tab[data-tab="text"]');
+          if (textTab) textTab.click();
+          if (els.inpSigText) {
+            els.inpSigText.focus();
+            els.inpSigText.select();
+          }
+          showToast("编辑签名内容");
+          return;
+        }
+      }
       if (!state.photos.length) return;
       const pt = canvasPoint(e);
       const idx = hitSlot(pt.x, pt.y, lastSlots);
@@ -4306,6 +4560,100 @@
     bindText(els.inpSubtitle, "subtitle");
     bindText(els.inpFooter, "footer");
     bindText(els.inpSubfooter, "subfooter");
+
+    // —— 艺术签名 ——
+    const sig = () => {
+      if (!state.signature) state.signature = defaultSignature();
+      return state.signature;
+    };
+    if (els.chkSigEnabled) {
+      els.chkSigEnabled.addEventListener("change", () => {
+        snapshot("签名·开关");
+        sig().enabled = !!els.chkSigEnabled.checked;
+        render();
+      });
+    }
+    if (els.inpSigText) {
+      els.inpSigText.addEventListener("focus", () => snapshotThrottled("签名·内容"));
+      els.inpSigText.addEventListener("input", () => {
+        const s = sig();
+        s.text = (els.inpSigText.value || "").slice(0, 20);
+        if (s.text && !s.enabled) {
+          s.enabled = true;
+          if (els.chkSigEnabled) els.chkSigEnabled.checked = true;
+        }
+        renderSoon();
+      });
+    }
+    if (els.selSigFont) {
+      els.selSigFont.addEventListener("change", () => {
+        snapshot("签名·书体");
+        sig().font = els.selSigFont.value || "hand";
+        render();
+      });
+    }
+    if (els.selSigEffect) {
+      els.selSigEffect.addEventListener("change", () => {
+        snapshot("签名·效果");
+        sig().colorMode = els.selSigEffect.value || "solid";
+        render();
+      });
+    }
+    document.querySelectorAll(".sig-swatch").forEach((sw) => {
+      sw.addEventListener("click", () => {
+        snapshot("签名·颜色");
+        const s = sig();
+        s.color = sw.dataset.color || "#1c1b18";
+        document.querySelectorAll(".sig-swatch").forEach((el) => el.classList.remove("is-active"));
+        sw.classList.add("is-active");
+        render();
+      });
+    });
+    document.querySelectorAll(".sig-pos-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        snapshot("签名·位置");
+        const s = sig();
+        setSignatureAnchor(btn.dataset.pos || "bc");
+        document.querySelectorAll(".sig-pos-btn").forEach((el) => el.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        void s;
+        render();
+      });
+    });
+    const bindSigRange = (el, apply, labelEl, format) => {
+      if (!el) return;
+      el.addEventListener("pointerdown", () => snapshotThrottled("签名·滑杆"));
+      el.addEventListener("input", () => {
+        apply(Number(el.value));
+        if (labelEl) labelEl.textContent = format(Number(el.value));
+        renderSoon();
+      });
+      el.addEventListener("change", () => render());
+    };
+    bindSigRange(
+      els.rngSigSize,
+      (v) => {
+        sig().size = Math.max(0.04, Math.min(0.25, v / 100));
+      },
+      els.sigSizeValue,
+      (v) => `${Math.round(v)}%`
+    );
+    bindSigRange(
+      els.rngSigRotate,
+      (v) => {
+        sig().rotate = Math.max(-45, Math.min(45, v));
+      },
+      els.sigRotateValue,
+      (v) => `${Math.round(v)}°`
+    );
+    bindSigRange(
+      els.rngSigOpacity,
+      (v) => {
+        sig().opacity = Math.max(0.2, Math.min(1, v / 100));
+      },
+      els.sigOpacityValue,
+      (v) => `${Math.round(v)}%`
+    );
 
     els.rngGhost.addEventListener("pointerdown", () => snapshotThrottled("淡影浓度"));
     els.rngGhost.addEventListener("input", () => {
@@ -4661,6 +5009,7 @@
         font: state.font,
         fontSub: state.fontSub,
         glow: state.glow,
+        signature: { ...defaultSignature(), ...(state.signature || {}) },
       };
       localStorage.setItem(TEXT_MEMORY_KEY, JSON.stringify(payload));
       showToast("文字设置已记住");
@@ -4730,6 +5079,16 @@
     els.selFont = $("sel-font");
     els.selFontSub = $("sel-font-sub");
     els.chkGlow = $("chk-glow");
+    els.chkSigEnabled = $("chk-sig-enabled");
+    els.inpSigText = $("inp-sig-text");
+    els.selSigFont = $("sel-sig-font");
+    els.selSigEffect = $("sel-sig-effect");
+    els.rngSigSize = $("rng-sig-size");
+    els.rngSigRotate = $("rng-sig-rotate");
+    els.rngSigOpacity = $("rng-sig-opacity");
+    els.sigSizeValue = $("sig-size-value");
+    els.sigRotateValue = $("sig-rotate-value");
+    els.sigOpacityValue = $("sig-opacity-value");
     els.chkSubs = $("chk-subs");
     els.chkAutoplay = $("chk-autoplay");
     els.chkLive = $("chk-live");
@@ -4856,6 +5215,7 @@
         photoZoomAll: state.photoZoomAll,
         viewZoom: state.viewZoom,
         spacePan: state.spacePan,
+        signature: { ...(state.signature || {}) },
         playerProgress: playerProgressFromTimes(
           state.playerMeta?.timeLeft,
           state.playerMeta?.timeRight,
