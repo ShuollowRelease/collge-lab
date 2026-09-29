@@ -1,0 +1,49 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: photo-cut
+      - separator [ref=e7]
+      - generic [ref=e8]: 本机拼贴 · HeroUI / React
+    - generic [ref=e9]:
+      - button "重置" [ref=e10] [cursor=pointer]
+      - button "记住设置" [ref=e11] [cursor=pointer]
+      - button "导出" [disabled]
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - generic [ref=e14]:
+        - tablist [ref=e17]:
+          - tab "照片" [selected] [ref=e18] [cursor=pointer]
+          - tab "外观" [ref=e19] [cursor=pointer]
+          - tab "文字" [ref=e20] [cursor=pointer]
+          - tab "导出" [ref=e21] [cursor=pointer]
+        - tabpanel "照片" [ref=e22]:
+          - generic [ref=e23]:
+            - heading "出图预设" [level=2] [ref=e24]
+            - generic [ref=e25]:
+              - button "IG 发帖" [ref=e26] [cursor=pointer]
+              - button "IG 动态墙" [ref=e27] [cursor=pointer]
+              - button "竖屏故事" [ref=e28] [cursor=pointer]
+              - button "马赛克" [ref=e29] [cursor=pointer]
+              - button "编辑风" [ref=e30] [cursor=pointer]
+              - button "均分对切" [ref=e31] [cursor=pointer]
+              - button "宝丽来" [ref=e32] [cursor=pointer]
+              - button "剪贴簿" [ref=e33] [cursor=pointer]
+              - button "圆形" [ref=e34] [cursor=pointer]
+              - button "大字底图" [ref=e35] [cursor=pointer]
+              - button "SNS 九宫" [ref=e36] [cursor=pointer]
+              - button "纸感" [ref=e37] [cursor=pointer]
+              - button "褪色" [ref=e38] [cursor=pointer]
+              - button "午夜" [ref=e39] [cursor=pointer]
+              - button "壁纸底" [ref=e40] [cursor=pointer]
+              - button "视频面板" [ref=e41] [cursor=pointer]
+              - button "播放器" [ref=e42] [cursor=pointer]
+          - generic [ref=e43]:
+            - heading "照片" [level=2] [ref=e44]
+            - generic [ref=e45]:
+              - button "选择图片" [ref=e46] [cursor=pointer]
+              - button "清空" [disabled]
+            - generic [ref=e47] [cursor=pointer]: 拖入或选择照片
+    - region "拼贴预览" [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e50]: 马赛克 · 1:1 · dark
+        - generic [ref=e51]: 640×640

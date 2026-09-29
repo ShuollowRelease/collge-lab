@@ -1,20 +1,22 @@
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { cpSync, existsSync, mkdirSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 function copyStaticAssets() {
   return {
     name: "copy-static-assets",
     closeBundle() {
-      const dist = join(__dirname, "dist");
+      const dist = join(root, "dist");
       if (!existsSync(dist)) mkdirSync(dist, { recursive: true });
-      const items = ["text.jpg", "icon", "assets"];
-      for (const item of items) {
-        const src = join(__dirname, item);
+      for (const item of ["text.jpg", "icon", "assets"]) {
+        const src = join(root, item);
         const dest = join(dist, item);
-        if (existsSync(src)) {
-          cpSync(src, dest, { recursive: true });
-        }
+        if (existsSync(src)) cpSync(src, dest, { recursive: true });
       }
     },
   };
@@ -22,7 +24,7 @@ function copyStaticAssets() {
 
 export default defineConfig({
   base: "./",
-  plugins: [copyStaticAssets()],
+  plugins: [react(), tailwindcss(), copyStaticAssets()],
   build: {
     outDir: "dist",
     assetsDir: "assets",
