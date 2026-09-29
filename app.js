@@ -1,4 +1,4 @@
-/* 光房拼贴 — client-side collage engine */
+/* photo-cut — client-side collage engine */
 (() => {
   "use strict";
 
@@ -138,6 +138,7 @@
   let toastTimer = null;
   let dragPan = null;
   let dragSig = null;
+  let sigHover = false;
   let dragSortId = null;
 
   const els = {};
@@ -1327,7 +1328,7 @@
         // YT 布局不重复画大标题页脚，只保留副信息
         const mainLine = chromeTitle ? "" : footer;
         if (subfooter) small.push(subfooter);
-        if (state.credit) small.push("光房拼贴");
+        if (state.credit) small.push("photo-cut");
         if (chromeTitle && footer && footer !== title) small.unshift(footer);
         if (mainLine) c.fillText(mainLine, W / 2, H - pad);
         if (small.length) {
@@ -1398,8 +1399,44 @@
     const sin = Math.sin(-b.rotate);
     const lx = dx * cos - dy * sin;
     const ly = dx * sin + dy * cos;
-    const pad = Math.max(10, b.fontSize * 0.2);
+    const pad = Math.max(12, b.fontSize * 0.25);
     return Math.abs(lx) <= b.w / 2 + pad && Math.abs(ly) <= b.h / 2 + pad;
+  }
+
+  function sigRotatedBox(b) {
+    const cos = Math.abs(Math.cos(b.rotate || 0));
+    const sin = Math.abs(Math.sin(b.rotate || 0));
+    return {
+      aw: b.w * cos + b.h * sin,
+      ah: b.w * sin + b.h * cos,
+    };
+  }
+
+  /** 钳制签名中心：至少 30% 文字包围盒仍可见 */
+  function clampSignaturePos(sig, W, H) {
+    if (!sig || !W || !H) return;
+    const b = signatureBounds(els.ctx, W, H);
+    if (!b) {
+      sig.x = Math.max(0, Math.min(1, Number(sig.x) || 0));
+      sig.y = Math.max(0, Math.min(1, Number(sig.y) || 0));
+      return;
+    }
+    const { aw, ah } = sigRotatedBox(b);
+    const minVisX = 0.3 * aw;
+    const minVisY = 0.3 * ah;
+    const minX = (minVisX - aw / 2) / W;
+    const maxX = (W - minVisX + aw / 2) / W;
+    const minY = (minVisY - ah / 2) / H;
+    const maxY = (H - minVisY + ah / 2) / H;
+    sig.x = Math.max(minX, Math.min(maxX, Number(sig.x) || 0));
+    sig.y = Math.max(minY, Math.min(maxY, Number(sig.y) || 0));
+  }
+
+  function markSignatureFree() {
+    const sig = state.signature;
+    if (!sig) return;
+    sig.pos = "free";
+    document.querySelectorAll(".sig-pos-btn").forEach((btn) => btn.classList.remove("is-active"));
   }
 
   function setSignatureAnchor(posKey) {
@@ -1423,6 +1460,7 @@
     sig.pos = posKey;
     sig.x = Math.max(0, Math.min(1, x / W));
     sig.y = Math.max(0, Math.min(1, y / H));
+    clampSignaturePos(sig, W, H);
   }
 
   function drawSignature(c, W, H) {
@@ -1473,6 +1511,28 @@
     } else {
       c.fillStyle = color;
       c.fillText(text, 0, 0);
+    }
+    c.restore();
+  }
+
+  /** 拖拽/悬停时的淡色包围盒 — 仅预览，不进入导出 */
+  function drawSignatureOverlay(c, W, H) {
+    if (!state.signature || !state.signature.enabled) return;
+    if (!dragSig && !sigHover) return;
+    const b = signatureBounds(c, W, H);
+    if (!b) return;
+    const pad = Math.max(12, b.fontSize * 0.25);
+    c.save();
+    c.translate(b.cx, b.cy);
+    c.rotate(b.rotate);
+    c.strokeStyle = dragSig ? "rgba(201,162,39,0.65)" : "rgba(201,162,39,0.4)";
+    c.lineWidth = Math.max(1.2, b.fontSize * 0.035);
+    c.setLineDash([Math.max(6, b.fontSize * 0.18), Math.max(4, b.fontSize * 0.1)]);
+    c.strokeRect(-b.w / 2 - pad, -b.h / 2 - pad, b.w + pad * 2, b.h + pad * 2);
+    if (dragSig) {
+      c.setLineDash([]);
+      c.fillStyle = "rgba(201,162,39,0.08)";
+      c.fillRect(-b.w / 2 - pad, -b.h / 2 - pad, b.w + pad * 2, b.h + pad * 2);
     }
     c.restore();
   }
@@ -1538,7 +1598,7 @@
       c.font = `400 ${Math.round(base * 0.024)}px ${fontStack(state.fontSub)}`;
       c.fillStyle = th.sub;
       c.textAlign = "right";
-      const extra = state.credit ? " · 光房拼贴" : "";
+      const extra = state.credit ? " · photo-cut" : "";
       c.fillText((footer || "") + extra, W - pad, H - barH * 0.42);
     }
     c.restore();
@@ -1567,7 +1627,7 @@
     const items = [
       title || "CONTACT SHEET",
       subtitle || `${state.photos.length} FRAMES`,
-      footer || `${formatDateShort()}${state.credit ? " · 光房拼贴" : ""}`,
+      footer || `${formatDateShort()}${state.credit ? " · photo-cut" : ""}`,
     ];
     items.forEach((txt, i) => {
       c.fillStyle = i === 0 ? th.ink : th.accent;
@@ -3070,7 +3130,7 @@
     if (options.captureSlots) lastSlots = slots;
 
     if (state.layout === "player") {
-      // art + chrome；不绘制「光房拼贴」
+      // art + chrome；不绘制「photo-cut」
       drawPlayerChrome(c, W, H, th, fontStack(state.fontSub));
     } else if (state.layout === "ig-post") {
       const igSlots = drawIgPostChrome(c, W, H, photos);
@@ -3267,7 +3327,7 @@
     els.btnExport2.disabled = !hasPhotos;
     els.btnClear.disabled = !hasPhotos;
     if (state.layout === "player") {
-      // 播放器布局强制不输出「光房拼贴」水印
+      // 播放器布局强制不输出「photo-cut」水印
       state.credit = false;
       if (els.chkCredit) els.chkCredit.checked = false;
     }
@@ -3288,6 +3348,7 @@
 
     if (showSample && !hasPhotos) {
       paintCollage(els.ctx, W, H, renderPhotos, { highlight: false, captureSlots: false, isSample: true });
+      drawSignatureOverlay(els.ctx, W, H);
       updateExportPreflight();
       els.statusText.textContent = `布局预览 · ${layoutName(state.layout)} · 示例图`;
       els.statusText.classList.add("is-ready");
@@ -3304,6 +3365,7 @@
       highlight: state.editMode === "crop" || state.editMode === "reorder",
       captureSlots: true,
     });
+    drawSignatureOverlay(els.ctx, W, H);
 
     updateExportPreflight();
     els.statusText.textContent = `已就绪 · ${photos.length} 张 · ${layoutName(state.layout)}${

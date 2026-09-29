@@ -1,6 +1,6 @@
 {
-  "appId": "com.glow.collage",
-  "productName": "光房拼贴",
+  "appId": "com.photo.cut",
+  "productName": "photo-cut",
   "directories": {
     "output": "release"
   },

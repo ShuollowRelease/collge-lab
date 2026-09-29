@@ -26,6 +26,14 @@ coverage/
 playwright-report/
 test-results/
 
+# Preview / screenshot outputs
+output/
+output/**/*.png
+output/**/*.jpg
+output/**/*.jpeg
+output/**/*.webp
+output/**/*.gif
+
 # Logs
 *.log
 npm-debug.log*

@@ -1,7 +1,7 @@
 {
-  "name": "glow-collage",
+  "name": "photo-cut",
   "version": "1.0.0",
-  "description": "光房拼贴 — 照片拼贴工具",
+  "description": "photo-cut — 照片拼贴工具",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",

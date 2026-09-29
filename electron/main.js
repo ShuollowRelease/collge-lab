@@ -9,7 +9,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 640,
-    title: "光房拼贴 — Collage Lab",
+    title: "photo-cut",
     backgroundColor: "#0f1115",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -65,8 +65,8 @@ const menuTemplate = [
         click: () => {
           const { dialog } = require("electron");
           dialog.showMessageBox({
-            title: "关于 光房拼贴",
-            message: "光房拼贴 — Collage Lab v1.0.0",
+            title: "关于 photo-cut",
+            message: "photo-cut v1.0.0",
             detail: "本地照片拼贴工具\n照片仅在本机处理，不上传网络。",
           });
         },
