@@ -1,0 +1,36 @@
+/* 本地艺术字体 — 离线可用，Canvas fillText / strokeText 均可调用 */
+@font-face {
+  font-family: "MaShanZheng";
+  src: url("MaShanZheng.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "LongCang";
+  src: url("LongCang.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "LiuJianMaoCao";
+  src: url("LiuJianMaoCao.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "ZCOOLXiaoWei";
+  src: url("ZCOOLXiaoWei.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "GreatVibes";
+  src: url("GreatVibes.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}

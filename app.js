@@ -4209,7 +4209,45 @@
         return;
       }
 
-      // —— 视口平移优先：中键 / Alt+左键 / 空格+左键 / 放大后非裁剪模式左键 ——
+      // —— 艺术签名拖拽（左键命中签名时优先于裁剪/视口平移；取色模式除外） ——
+      if (
+        e.button === 0 &&
+        !e.altKey &&
+        !state.spacePan &&
+        state.signature &&
+        state.signature.enabled &&
+        String(state.signature.text || "").trim()
+      ) {
+        const spt = canvasPoint(e);
+        if (hitSignature(spt.x, spt.y, els.ctx, els.canvas.width, els.canvas.height)) {
+          e.preventDefault();
+          // 拖前快照，撤销可回到原位
+          snapshot("签名拖拽");
+          const short = Math.min(els.canvas.width, els.canvas.height);
+          dragSig = {
+            startX: spt.x,
+            startY: spt.y,
+            x0: Number(state.signature.x) || 0,
+            y0: Number(state.signature.y) || 0,
+            pos0: state.signature.pos || "free",
+            W: els.canvas.width,
+            H: els.canvas.height,
+            moved: false,
+            freeThreshold: short * 0.01,
+          };
+          try {
+            canvas.setPointerCapture(e.pointerId);
+          } catch {
+            /* ignore */
+          }
+          canvas.classList.add("is-dragging-sig");
+          canvas.classList.remove("can-drag-sig");
+          sigHover = false;
+          return;
+        }
+      }
+
+      // —— 视口平移：中键 / Alt+左键 / 空格+左键 / 放大后非裁剪模式左键 ——
       if (isViewPanEvent(e)) {
         e.preventDefault();
         const sc = viewportScroller();
@@ -4226,30 +4264,6 @@
         }
         canvas.classList.add("is-panning-view");
         return;
-      }
-
-      // —— 艺术签名拖拽（优先于照片裁剪） ——
-      if (state.signature && state.signature.enabled && String(state.signature.text || "").trim()) {
-        const spt = canvasPoint(e);
-        if (hitSignature(spt.x, spt.y, els.ctx, els.canvas.width, els.canvas.height)) {
-          e.preventDefault();
-          snapshotThrottled("签名拖拽");
-          dragSig = {
-            startX: spt.x,
-            startY: spt.y,
-            x0: Number(state.signature.x) || 0,
-            y0: Number(state.signature.y) || 0,
-            W: els.canvas.width,
-            H: els.canvas.height,
-          };
-          try {
-            canvas.setPointerCapture(e.pointerId);
-          } catch {
-            /* ignore */
-          }
-          canvas.classList.add("is-dragging-sig");
-          return;
-        }
       }
 
       if (!state.photos.length || state.editMode !== "crop") return;
@@ -4287,13 +4301,39 @@
         const pt = canvasPoint(e);
         const s = state.signature;
         if (s && dragSig.W && dragSig.H) {
-          s.x = Math.max(0, Math.min(1, dragSig.x0 + (pt.x - dragSig.startX) / dragSig.W));
-          s.y = Math.max(0, Math.min(1, dragSig.y0 + (pt.y - dragSig.startY) / dragSig.H));
-          s.pos = "";
-          document.querySelectorAll(".sig-pos-btn").forEach((btn) => btn.classList.remove("is-active"));
+          const dx = pt.x - dragSig.startX;
+          const dy = pt.y - dragSig.startY;
+          if (!dragSig.moved) {
+            const dist = Math.hypot(dx, dy);
+            if (dist < (dragSig.freeThreshold || 0)) return;
+            dragSig.moved = true;
+            markSignatureFree();
+          }
+          s.x = dragSig.x0 + dx / dragSig.W;
+          s.y = dragSig.y0 + dy / dragSig.H;
+          clampSignaturePos(s, dragSig.W, dragSig.H);
           renderSoon();
         }
         return;
+      }
+      // 悬停命中签名 → grab
+      if (
+        !state.colorPickMode &&
+        state.signature &&
+        state.signature.enabled &&
+        String(state.signature.text || "").trim()
+      ) {
+        const spt = canvasPoint(e);
+        const over = hitSignature(spt.x, spt.y, els.ctx, els.canvas.width, els.canvas.height);
+        if (over !== sigHover) {
+          sigHover = over;
+          canvas.classList.toggle("can-drag-sig", over);
+          renderSoon();
+        }
+      } else if (sigHover) {
+        sigHover = false;
+        canvas.classList.remove("can-drag-sig");
+        renderSoon();
       }
       if (!dragPan) return;
       const p = state.photos.find((x) => x.id === dragPan.id);
@@ -4318,6 +4358,13 @@
         return;
       }
       if (dragSig) {
+        const wasMoved = dragSig.moved;
+        // 纯点击未位移：丢掉多余撤销快照
+        if (!wasMoved && undoStack.length) {
+          const last = undoStack[undoStack.length - 1];
+          if (last && last.label === "签名拖拽") undoStack.pop();
+          if (els.btnUndo) els.btnUndo.disabled = undoStack.length === 0;
+        }
         dragSig = null;
         canvas.classList.remove("is-dragging-sig");
         try {
@@ -4342,6 +4389,11 @@
     canvas.addEventListener("pointerup", end);
     canvas.addEventListener("pointercancel", end);
     canvas.addEventListener("pointerleave", () => {
+      if (sigHover) {
+        sigHover = false;
+        canvas.classList.remove("can-drag-sig");
+        renderSoon();
+      }
       // 空格松开后若焦点不在画布，去掉 grab
       if (!state.spacePan && (state.viewZoom || 1) <= 1.02) {
         canvas.classList.remove("can-pan-view");
@@ -4929,6 +4981,63 @@
     if (els.btnRedo) els.btnRedo.addEventListener("click", redoOnce);
 
     window.addEventListener("keydown", (e) => {
+      // Escape：取消签名拖拽并回退
+      if (e.key === "Escape" && dragSig) {
+        e.preventDefault();
+        const s = state.signature;
+        if (s) {
+          s.x = dragSig.x0;
+          s.y = dragSig.y0;
+          s.pos = dragSig.pos0;
+          if (dragSig.pos0 && dragSig.pos0 !== "free" && SIG_POS[dragSig.pos0]) {
+            document.querySelectorAll(".sig-pos-btn").forEach((btn) => {
+              btn.classList.toggle("is-active", btn.dataset.pos === dragSig.pos0);
+            });
+          } else {
+            document.querySelectorAll(".sig-pos-btn").forEach((btn) => btn.classList.remove("is-active"));
+          }
+        }
+        if (els.canvas) els.canvas.classList.remove("is-dragging-sig");
+        dragSig = null;
+        render();
+        showToast("已取消签名拖拽");
+        return;
+      }
+
+      // 方向键微调签名（焦点在画布/页面，且不在表单或侧栏控件上）
+      const focusTag = document.activeElement?.tagName;
+      const typing = focusTag === "INPUT" || focusTag === "TEXTAREA" || focusTag === "SELECT";
+      const ae = document.activeElement;
+      const focusOnChrome =
+        ae &&
+        ae !== document.body &&
+        ae !== els.canvas &&
+        ae?.closest?.(".rail, .topbar, .filmstrip, .canvas-toolbar, .stage-bar");
+      if (
+        !typing &&
+        !focusOnChrome &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        state.signature &&
+        state.signature.enabled &&
+        String(state.signature.text || "").trim() &&
+        (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")
+      ) {
+        e.preventDefault();
+        snapshotThrottled("签名微调");
+        const step = e.shiftKey ? 0.05 : 0.005;
+        const s = state.signature;
+        if (e.key === "ArrowLeft") s.x = (Number(s.x) || 0) - step;
+        if (e.key === "ArrowRight") s.x = (Number(s.x) || 0) + step;
+        if (e.key === "ArrowUp") s.y = (Number(s.y) || 0) - step;
+        if (e.key === "ArrowDown") s.y = (Number(s.y) || 0) + step;
+        clampSignaturePos(s, previewW, previewH);
+        markSignatureFree();
+        render();
+        return;
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e") {
         const tag = document.activeElement?.tagName;
         if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") {
