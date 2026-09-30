@@ -6,7 +6,8 @@
   },
   "files": [
     "dist/**/*",
-    "electron/**/*"
+    "electron/**/*",
+    "icon/**/*"
   ],
   "win": {
     "target": "nsis",

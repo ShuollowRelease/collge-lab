@@ -11,6 +11,7 @@ function createWindow() {
     minHeight: 640,
     title: "photo-cut",
     backgroundColor: "#0f1115",
+    icon: path.join(__dirname, "../icon/icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
