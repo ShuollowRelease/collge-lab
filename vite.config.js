@@ -35,5 +35,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    watch: {
+      // tools/ 里是 Node 自检脚本，不属于应用资源。
+      // 不排除的话每存一次脚本都会整页刷新，打断正在进行的调试。
+      ignored: ["**/tools/**", "**/output/**", "**/.verify/**"],
+    },
   },
 });

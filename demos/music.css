@@ -1,0 +1,430 @@
+/* Apple Music 风格音乐播放器 · 视觉层
+ * 颜色/尺寸走 CSS 变量；图标 currentColor。
+ */
+
+:root {
+  --am-bg: #000000;
+  --am-surface: #1c1c1e;
+  --am-card-radius: 18px;
+  --am-icon-color: rgba(255, 255, 255, 0.92);
+  --am-icon-muted: rgba(255, 255, 255, 0.55);
+  --am-text: #ffffff;
+  --am-text-muted: rgba(255, 255, 255, 0.58);
+  --am-accent: #fa2d48;
+  --am-accent-soft: rgba(250, 45, 72, 0.35);
+  --am-progress-track: rgba(255, 255, 255, 0.18);
+  --am-progress-fill: var(--am-accent);
+  --am-focus: #0a84ff;
+  --am-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Segoe UI", "PingFang SC", "Microsoft YaHei", Helvetica, Arial, sans-serif;
+  --am-art-ratio: 1 / 1;
+  --am-icon-size: 22px;
+  --am-btn-size: 44px;
+  --am-play-size: 72px;
+  --am-progress-h: 4px;
+  --am-progress-hit: 18px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--am-font);
+  background: radial-gradient(1200px 700px at 20% -10%, #2a1520 0%, transparent 55%),
+    radial-gradient(900px 600px at 90% 110%, #1a1028 0%, transparent 50%), var(--am-bg);
+  color: var(--am-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 28px 16px 48px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.page-head h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.page-head p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--am-text-muted);
+  max-width: 36em;
+}
+
+.theme-toggle {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.03);
+}
+
+/* ─── 播放器卡片 ─────────────────────────────────────────── */
+
+.am-player {
+  position: relative;
+  width: 100%;
+  border-radius: var(--am-card-radius);
+  padding: 22px 22px 26px;
+  background: linear-gradient(180deg, rgba(28, 28, 30, 0.92), rgba(18, 18, 20, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.am-player::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(80% 55% at 50% 0%, var(--am-accent-soft), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.am-player > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 封面 */
+.am-art-wrap {
+  width: min(100%, 320px);
+  margin: 4px auto 18px;
+  aspect-ratio: var(--am-art-ratio);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: linear-gradient(145deg, #3a2030, #1a1030);
+}
+
+.am-art-wrap img,
+.am-art-wrap video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.am-art-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+  background: linear-gradient(145deg, #4a2a38, #221838);
+}
+
+/* 曲名区 */
+.am-meta {
+  margin: 0 2px 14px;
+}
+
+.am-track {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-artist {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--am-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 进度 */
+.am-progress {
+  position: relative;
+  width: 100%;
+  height: var(--am-progress-hit);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+  margin-bottom: 2px;
+}
+
+.am-progress-track {
+  position: relative;
+  width: 100%;
+  height: var(--am-progress-h);
+  border-radius: 999px;
+  background: var(--am-progress-track);
+  transition: height 0.12s ease;
+}
+
+.am-progress:hover .am-progress-track,
+.am-progress.is-dragging .am-progress-track {
+  height: 6px;
+}
+
+.am-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--am-progress-fill);
+  pointer-events: none;
+}
+
+.am-progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 13px;
+  height: 13px;
+  margin-left: -6.5px;
+  border-radius: 999px;
+  background: var(--am-text);
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.12s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.am-progress:hover .am-progress-thumb,
+.am-progress.is-dragging .am-progress-thumb {
+  transform: translateY(-50%) scale(1);
+}
+
+.am-times {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--am-text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* 传输控制 */
+.am-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 6px 0 10px;
+}
+
+.am-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--am-icon-color);
+  width: var(--am-btn-size);
+  height: var(--am-btn-size);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.16s ease, transform 0.16s ease, color 0.16s ease;
+}
+
+.am-btn:hover {
+  opacity: 0.72;
+  transform: scale(1.08);
+}
+
+.am-btn:active {
+  transform: scale(0.94);
+  opacity: 0.9;
+}
+
+.am-btn:focus-visible {
+  outline: 2px solid var(--am-focus);
+  outline-offset: 2px;
+}
+
+.am-btn svg {
+  width: var(--am-icon-size);
+  height: var(--am-icon-size);
+  display: block;
+  pointer-events: none;
+}
+
+.am-btn.is-on {
+  color: var(--am-accent);
+  opacity: 1;
+}
+
+/* 播放/暂停：强调色圆底 */
+.am-btn-play {
+  width: var(--am-play-size);
+  height: var(--am-play-size);
+  background: var(--am-accent);
+  color: #fff;
+  box-shadow: 0 8px 22px var(--am-accent-soft);
+}
+
+.am-btn-play:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  background: #ff3b52;
+}
+
+.am-btn-play:active {
+  transform: scale(0.96);
+}
+
+.am-btn-play svg {
+  width: 30px;
+  height: 30px;
+}
+
+/* 底部辅助：爱心 / 音量 / 队列 */
+.am-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.am-volume-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.am-volume-slider {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.am-volume-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--am-progress-track);
+  outline: none;
+  cursor: pointer;
+}
+
+.am-volume-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--am-text);
+  border: 0;
+}
+
+.am-volume-slider input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--am-text);
+  border: 0;
+}
+
+.am-side {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ─── 图标说明 ───────────────────────────────────────────── */
+
+.icon-notes {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.icon-notes h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.icon-notes dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.icon-notes dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--am-icon-color);
+}
+
+.icon-notes dd {
+  margin: 0;
+  color: var(--am-text-muted);
+}
+
+.icon-notes svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --am-play-size: 64px;
+    --am-icon-size: 20px;
+    --am-track-size: 20px;
+  }
+
+  .am-track {
+    font-size: 20px;
+  }
+
+  .am-transport {
+    gap: 18px;
+  }
+}

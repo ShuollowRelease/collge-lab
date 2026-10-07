@@ -207,7 +207,7 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: var(--nav-w) var(--sidebar-w) minmax(0, 1fr);
   min-height: 0;
   height: 100%;
 }
@@ -368,11 +368,17 @@ body {
 }
 
 .canvas-frame {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   overflow: hidden;
   box-shadow: var(--surface-shadow);
+}
+
+/* 进入网格编辑态时给出边框提示，避免用户以为拖动无效 */
+.canvas-frame.is-editing {
+  border-color: var(--accent);
 }
 
 .canvas-frame canvas {
@@ -442,4 +448,1564 @@ body {
   border-color: var(--accent);
   color: var(--accent-foreground);
   background: var(--accent);
+}
+
+/* ------------------------------------------------------------------ *
+ * 自定义网格 · 高级编辑层
+ * 仅预览可见（绝不进导出路径）。颜色全部取自 :root 令牌。
+ * ------------------------------------------------------------------ */
+
+.grid-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  touch-action: none;
+  user-select: none;
+}
+
+.grid-overlay-svg {
+  display: block;
+  overflow: visible;
+}
+
+.freeform-overlay {
+  z-index: 3;
+}
+
+.freeform-region {
+  fill: color-mix(in oklab, var(--accent) 5%, transparent);
+  stroke: transparent;
+  stroke-width: 1;
+  pointer-events: none;
+  transition: fill var(--motion-fast) ease, stroke var(--motion-fast) ease;
+}
+
+.freeform-region.is-hot {
+  fill: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.freeform-region.is-selected {
+  fill: color-mix(in oklab, var(--accent) 18%, transparent);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.freeform-edge {
+  stroke: var(--grid-overlay-line);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 1px var(--grid-overlay-halo));
+  pointer-events: none;
+}
+
+.freeform-edge.is-frame {
+  stroke: color-mix(in oklab, var(--foreground) 45%, transparent);
+  stroke-dasharray: 5 5;
+}
+
+.freeform-edge.is-hot {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.freeform-node {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 1px var(--grid-overlay-halo));
+  pointer-events: none;
+}
+
+.freeform-node-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+  cursor: inherit;
+}
+
+.freeform-node.is-frame {
+  fill: var(--background);
+  stroke: var(--foreground);
+}
+
+.freeform-node.is-boundary {
+  fill: var(--surface-tertiary);
+  stroke: var(--accent);
+}
+
+.freeform-node.is-hot,
+.freeform-node.is-connect-start {
+  fill: var(--accent);
+  stroke: var(--accent-foreground);
+}
+
+.freeform-connect-start {
+  fill: transparent;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.freeform-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.freeform-tool {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--field-radius);
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.freeform-tool:hover,
+.freeform-tool.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.freeform-tool:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.freeform-region-settings {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--separator);
+}
+
+.freeform-warning {
+  margin: 8px 0 12px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in oklab, var(--warning) 35%, var(--border));
+  border-radius: var(--control-radius);
+  background: color-mix(in oklab, var(--warning) 10%, transparent);
+  color: var(--warning);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* 格子：默认透明，选中 / 异形时给出可见反馈 */
+.grid-cell {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 0;
+  transition: fill 0.12s ease;
+}
+
+.grid-cell.is-selected {
+  fill: color-mix(in oklab, var(--accent) 18%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.grid-cell.has-shape {
+  stroke: color-mix(in oklab, var(--accent) 45%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+/* 分隔线：默认虚线，悬停时高亮为强调色 */
+.grid-divider {
+  stroke: var(--grid-overlay-line);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 1px var(--grid-overlay-halo));
+  pointer-events: none;
+}
+
+.grid-divider.is-hot {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 1px var(--grid-overlay-halo));
+}
+
+/* 交叉点 */
+.grid-node-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+  cursor: inherit;
+}
+
+.grid-node {
+  fill: var(--background);
+  stroke: var(--accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 1px var(--grid-overlay-halo));
+  pointer-events: none;
+  transition: r 0.1s ease;
+}
+
+.grid-node.is-hot {
+  fill: var(--accent);
+}
+
+/* 框选 */
+.grid-band {
+  fill: color-mix(in oklab, var(--accent) 14%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * 高级编辑面板
+ * ------------------------------------------------------------------ */
+
+.apply-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.apply-row .apply-label {
+  flex: 0 0 34px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.apply-row .apply-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* 面板内的说明文字：统一字号与语气，避免各处内联 style */
+.hint-text {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 4px 0 12px;
+}
+
+.shape-block {
+  margin-bottom: 10px;
+}
+
+.shape-block-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.shape-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.shape-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.shape-card:hover {
+  background: var(--surface-tertiary);
+  border-color: var(--border-secondary);
+}
+
+.shape-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.shape-card svg {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+}
+
+.shape-card svg polygon {
+  fill: color-mix(in oklab, var(--foreground) 22%, transparent);
+  stroke: var(--muted);
+  stroke-width: 2;
+}
+
+.shape-card.is-active svg polygon {
+  fill: color-mix(in oklab, var(--accent) 45%, transparent);
+  stroke: var(--accent);
+}
+
+.shape-card span {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--muted);
+  text-align: center;
+}
+
+.shape-card.is-active span {
+  color: var(--foreground);
+}
+
+:root {
+  --rail-w: 320px;
+  --panel-space: 16px;
+  --motion-fast: 160ms;
+  --motion-smooth: 260ms;
+  --motion-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+  --signature-handle-size: 24px;
+  --grid-overlay-line: color-mix(in oklab, var(--foreground) 82%, transparent);
+  --grid-overlay-halo: color-mix(in oklab, var(--background) 94%, transparent);
+}
+.workspace {
+  grid-template-columns: minmax(280px, var(--rail-w)) minmax(0, 1fr);
+}
+
+.preset-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.preset-group {
+  display: grid;
+  gap: 8px;
+}
+
+.preset-group-title {
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.preset-group-title:hover {
+  color: var(--foreground);
+}
+
+.preset-group-title:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.preset-group-title-trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preset-group-chevron {
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.preset-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.preset-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-secondary);
+  background: var(--surface-tertiary);
+}
+
+.preset-card:active {
+  transform: translateY(0);
+}
+
+.preset-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.preset-card-title {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-card-meta {
+  overflow: hidden;
+  color: var(--accent);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interaction-panel {
+  background: color-mix(in oklab, var(--surface-secondary) 62%, transparent);
+}
+
+.player-track-setting {
+  min-width: 0;
+}
+
+.player-track-preview {
+  width: min(var(--progress-track-width), 100%);
+  max-width: 100%;
+  min-width: min(var(--progress-track-min-width), 100%);
+  height: 8px;
+  margin: -4px 0 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.player-track-preview__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.interaction-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.signature-assets {
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-secondary);
+}
+
+.stage-inner .canvas-frame {
+  animation: canvas-enter var(--motion-smooth) var(--motion-ease);
+}
+
+@keyframes canvas-enter {
+  from {
+    opacity: 0.68;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 1080px) {
+  .workspace {
+    grid-template-columns: minmax(264px, 292px) minmax(0, 1fr);
+  }
+
+  .preset-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.signature-handle {
+  position: absolute;
+  z-index: 3;
+  width: var(--signature-handle-size);
+  height: var(--signature-handle-size);
+  border: 1px dashed var(--accent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity var(--motion-fast) ease, transform var(--motion-fast) var(--motion-ease);
+  touch-action: none;
+}
+
+.canvas-frame:hover .signature-handle,
+.signature-handle:focus-visible {
+  opacity: 1;
+}
+
+.signature-handle:active {
+  cursor: grabbing;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+
+:root {
+  --topbar-h: 56px;
+  --stage-pad: 20px;
+  --control-radius: 10px;
+  --card-radius: 14px;
+  --hairline: color-mix(in oklab, var(--border) 78%, transparent);
+}
+
+body {
+  background: var(--background);
+}
+
+.app-shell {
+  isolation: isolate;
+}
+
+.topbar {
+  min-height: var(--topbar-h);
+  padding: 10px var(--stage-pad);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  box-shadow: 0 1px 0 var(--hairline);
+  backdrop-filter: blur(18px);
+  position: relative;
+  z-index: 5;
+}
+
+.topbar .brand {
+  letter-spacing: -0.035em;
+}
+
+.topbar button,
+.topbar [data-slot="trigger"] {
+  border-radius: var(--control-radius);
+}
+
+.rail {
+  background: color-mix(in oklab, var(--surface) 94%, var(--background));
+  scrollbar-color: var(--border-secondary) transparent;
+  scrollbar-width: thin;
+}
+
+.rail > [data-slot="tabs"] {
+  min-height: 0;
+}
+
+.rail [role="tablist"] {
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--control-radius);
+  background: var(--surface-secondary);
+}
+
+.rail [role="tab"] {
+  min-height: 32px;
+  border-radius: calc(var(--control-radius) - 2px);
+  color: var(--muted);
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.rail [role="tab"][aria-selected="true"] {
+  color: var(--foreground);
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+}
+
+.panel-section {
+  padding: var(--panel-space);
+  border-bottom-color: var(--hairline);
+}
+
+.panel-section h2 {
+  color: var(--foreground);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.stage {
+  background:
+    radial-gradient(circle at 50% 30%, color-mix(in oklab, var(--accent) 4%, transparent), transparent 48%),
+    var(--background-secondary);
+}
+
+.stage > .flex {
+  min-height: 40px;
+  background: color-mix(in oklab, var(--surface) 58%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.stage-inner {
+  padding: var(--stage-pad);
+}
+
+.canvas-frame {
+  border-radius: var(--card-radius);
+  border-color: var(--hairline);
+  box-shadow:
+    0 18px 50px color-mix(in oklab, var(--foreground) 10%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--surface) 40%, transparent);
+  transition: box-shadow var(--motion-smooth) var(--motion-ease), border-color var(--motion-fast) ease;
+}
+
+.canvas-frame:hover {
+  box-shadow:
+    0 24px 70px color-mix(in oklab, var(--foreground) 14%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.layout-card,
+.preset-card,
+.shape-card {
+  border-radius: var(--control-radius);
+}
+
+.layout-card.is-active,
+.shape-card.is-active,
+.preset-card.is-active {
+  box-shadow: 0 0 0 1px var(--accent), 0 6px 18px color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.dropzone {
+  border-radius: var(--control-radius);
+  padding-block: 26px;
+}
+
+.field-row {
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.hint-text {
+  max-width: 42ch;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1280px) {
+  .workspace {
+    grid-template-columns: minmax(320px, var(--rail-w)) minmax(0, 1fr);
+  }
+
+  .stage-inner {
+    padding: 28px;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell {
+    min-height: 100%;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .rail {
+    max-height: none;
+    overflow: visible;
+    order: 2;
+  }
+
+  .stage {
+    min-height: 58vh;
+    order: 1;
+  }
+
+  .stage-inner {
+    min-height: 52vh;
+  }
+}
+
+/* 工作台外壳：导航、设置面板和画布各自拥有独立的滚动上下文。 */
+:root {
+  --nav-w: 84px;
+  --sidebar-w: 356px;
+  --workspace-gap: 0px;
+  --toolbar-h: 64px;
+  --filmstrip-h: 102px;
+  --hover-card-scale: 1.03;
+  --hover-card-duration: 180ms;
+  --hover-card-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+  --hover-card-shadow: 0 12px 30px color-mix(in oklab, var(--foreground) 18%, transparent);
+  --hover-card-z: 20;
+  --hover-card-popover-z: 1000;
+  --hover-card-popover-delay: 120ms;
+  --progress-track-width: 78%;
+  --progress-track-min-width: 120px;
+  --yt-short-action-size: clamp(28px, 5.5vw, 42px);
+  --yt-short-action-gap: 8px;
+  --yt-short-overlay-z: 4;
+}
+
+.workspace {
+  grid-template-columns: var(--nav-w) var(--sidebar-w) minmax(0, 1fr);
+  gap: var(--workspace-gap);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.nav-rail {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  padding: 14px 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--hairline);
+  overflow: hidden;
+}
+
+.nav-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 32px;
+  margin: 0 auto 8px;
+  border-radius: var(--control-radius);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-transform: lowercase;
+}
+
+.nav-list,
+.nav-footer {
+  display: grid;
+  gap: 7px;
+}
+
+.nav-list {
+  flex: 1;
+  align-content: start;
+}
+
+.nav-footer {
+  align-content: end;
+}
+
+.nav-item {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.15;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+}
+
+.nav-item:hover {
+  color: var(--foreground);
+  background: var(--surface-secondary);
+}
+
+.nav-item.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+.nav-icon {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
+.nav-language {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.nav-footer .inline-flex {
+  justify-self: center;
+  transform: scale(0.82);
+  transform-origin: center;
+}
+
+.settings-sidebar {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--surface) 96%, var(--background));
+  scrollbar-color: var(--border-secondary) transparent;
+  scrollbar-width: thin;
+}
+
+.settings-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 78px;
+  padding: 16px 18px 12px;
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  border-bottom: 1px solid var(--hairline);
+  backdrop-filter: blur(16px);
+}
+
+.settings-kicker {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.settings-header h1 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 21px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.help-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.help-button:first-letter {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.help-button:hover {
+  color: var(--foreground);
+}
+
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-collapse {
+  display: none;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface-secondary);
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.settings-collapse:hover {
+  color: var(--foreground);
+  border-color: var(--border-secondary);
+}
+
+.settings-tabs,
+.settings-tabs [role="tabpanel"] {
+  min-height: 0;
+}
+
+.settings-tab-list {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.settings-tabs [role="tabpanel"] {
+  padding: 0;
+}
+
+.settings-sidebar .panel-section {
+  padding: 18px;
+}
+
+.layout-feature {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  background: var(--surface-secondary);
+}
+
+.layout-feature .thumb {
+  width: 76px;
+  height: 76px;
+  border-radius: calc(var(--control-radius) - 2px);
+}
+
+.layout-feature-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.layout-feature-kicker {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.layout-feature-copy strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layout-feature-copy > span:last-child {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-sidebar .layout-grid.is-collapsed {
+  max-height: 0;
+  margin: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hover-card-shell {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+}
+
+.hover-card-shell.is-open {
+  z-index: var(--hover-card-z);
+}
+
+.hover-card-target {
+  position: relative;
+  z-index: 0;
+  transform-origin: center;
+  transition:
+    transform var(--hover-card-duration) var(--hover-card-ease),
+    box-shadow var(--hover-card-duration) var(--hover-card-ease),
+    opacity var(--hover-card-duration) ease;
+  will-change: transform;
+}
+
+.hover-card-shell.is-open > .hover-card-target {
+  z-index: var(--hover-card-z);
+  transform: scale(var(--hover-card-scale));
+  box-shadow: var(--hover-card-shadow);
+}
+
+.hover-card-shell.is-open > .hover-card-target.is-active {
+  box-shadow: var(--hover-card-shadow), 0 0 0 1px var(--accent);
+}
+
+.hover-card-popover {
+  position: fixed;
+  z-index: var(--hover-card-popover-z);
+  width: min(286px, calc(100vw - 20px));
+  max-height: min(260px, calc(100vh - 20px));
+  overflow: auto;
+  padding: 14px 15px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--card-radius);
+  background: color-mix(in oklab, var(--overlay) 96%, var(--surface));
+  color: var(--foreground);
+  box-shadow: 0 16px 44px color-mix(in oklab, var(--background) 54%, transparent);
+  pointer-events: auto;
+  animation: hover-card-popover-in var(--hover-card-duration) var(--hover-card-ease) both;
+  animation-delay: var(--hover-card-popover-delay);
+}
+
+.hover-card-popover-kicker {
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hover-card-popover h3 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.hover-card-popover p {
+  margin: 6px 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.hover-card-popover dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.hover-card-popover dl > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.hover-card-popover dt,
+.hover-card-popover dd {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.hover-card-popover dt {
+  color: var(--muted);
+}
+
+.hover-card-popover dd {
+  color: var(--foreground);
+  text-align: right;
+}
+
+@keyframes hover-card-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --hover-card-scale: 1;
+    --hover-card-duration: 1ms;
+    --hover-card-popover-delay: 0ms;
+  }
+
+  .hover-card-popover {
+    animation: none;
+  }
+}
+
+.look-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.look-two-col .field-row {
+  min-width: 0;
+}
+
+.borderless-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.borderless-switch [data-slot="content"] {
+  display: grid;
+  gap: 2px;
+}
+
+.switch-note {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.light-section {
+  display: grid;
+  gap: 9px;
+  margin: 20px 0 16px;
+}
+
+.light-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.light-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.light-preview {
+  display: block;
+  aspect-ratio: 1.18;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--foreground) 8%, transparent), transparent 62%),
+    var(--surface-tertiary);
+  box-shadow: inset 0 0 20px color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+.light-card-warm .light-preview {
+  background: radial-gradient(circle at 28% 25%, color-mix(in oklab, var(--accent) 46%, transparent), transparent 58%), var(--surface-tertiary);
+}
+
+.light-card-cool .light-preview {
+  background: radial-gradient(circle at 72% 25%, color-mix(in oklab, var(--link) 26%, transparent), transparent 58%), var(--surface-tertiary);
+}
+
+.light-card-vignette .light-preview {
+  background: radial-gradient(circle, transparent 15%, color-mix(in oklab, var(--foreground) 28%, transparent) 100%), var(--surface-tertiary);
+}
+
+.light-card-softbox .light-preview {
+  background: radial-gradient(circle at 50% 20%, color-mix(in oklab, var(--foreground) 20%, transparent), transparent 68%), var(--surface-tertiary);
+}
+
+.light-card:hover,
+.light-card.is-active {
+  color: var(--foreground);
+}
+
+.light-card.is-active .light-preview {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 6px 18px color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.texture-picker {
+  min-width: 0;
+}
+
+.texture-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.texture-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.texture-preview {
+  display: block;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--control-radius) - 2px);
+  background: var(--surface-tertiary);
+}
+
+.texture-card-grain .texture-preview {
+  background-image: radial-gradient(color-mix(in oklab, var(--foreground) 28%, transparent) 0.8px, transparent 0.8px);
+  background-size: 5px 5px;
+}
+
+.texture-card-paper .texture-preview {
+  background-image: repeating-linear-gradient(12deg, color-mix(in oklab, var(--foreground) 10%, transparent) 0 1px, transparent 1px 5px);
+}
+
+.texture-card-both .texture-preview {
+  background-image:
+    radial-gradient(color-mix(in oklab, var(--foreground) 24%, transparent) 0.8px, transparent 0.8px),
+    repeating-linear-gradient(12deg, color-mix(in oklab, var(--foreground) 9%, transparent) 0 1px, transparent 1px 5px);
+  background-size: 5px 5px, auto;
+}
+
+.texture-card:hover,
+.texture-card.is-active {
+  color: var(--foreground);
+}
+
+.texture-card.is-active .texture-preview {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 6px 18px color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.stage {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: var(--toolbar-h) minmax(0, 1fr) var(--filmstrip-h);
+  background:
+    repeating-linear-gradient(45deg, color-mix(in oklab, var(--foreground) 2%, transparent) 0 2px, transparent 2px 6px),
+    radial-gradient(circle at 50% 28%, color-mix(in oklab, var(--accent) 5%, transparent), transparent 52%),
+    var(--background-secondary);
+}
+
+.stage-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--surface) 72%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.toolbar-actions {
+  justify-content: flex-end;
+}
+
+.stage-context {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stage-context-meta {
+  color: var(--muted);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.stage-inner {
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(16px, 3vw, 34px);
+  overflow: auto;
+}
+
+.stage-inner .canvas-frame {
+  max-width: 100%;
+  margin: auto;
+}
+
+.stage-inner .canvas-frame canvas {
+  max-width: min(760px, 100%);
+  max-height: min(640px, 100%);
+}
+
+.yt-short-overlay {
+  position: absolute;
+  z-index: var(--yt-short-overlay-z);
+  top: var(--yt-short-rail-top);
+  right: calc(100% - var(--yt-short-rail-x) - var(--yt-short-rail-width));
+  width: var(--yt-short-rail-width);
+  max-width: var(--yt-short-rail-width);
+  display: grid;
+  justify-items: center;
+  gap: var(--yt-short-action-gap);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.yt-short-action {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  width: var(--yt-short-action-size);
+  min-height: var(--yt-short-action-size);
+  padding: 4px 2px;
+  border: 0;
+  border-radius: var(--control-radius);
+  background: color-mix(in oklab, var(--background) 42%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, transform var(--motion-fast) var(--motion-ease);
+}
+
+.yt-short-action:hover,
+.yt-short-action:focus-visible {
+  background: color-mix(in oklab, var(--background) 70%, transparent);
+  color: var(--accent);
+  transform: scale(1.04);
+}
+
+.yt-short-action[aria-pressed="true"] {
+  color: var(--accent);
+}
+
+.yt-short-action:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.yt-short-action svg {
+  width: var(--yt-short-action-size);
+  height: var(--yt-short-action-size);
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.yt-short-count {
+  max-width: 100%;
+  overflow: hidden;
+  color: currentColor;
+  font-size: 10px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-filmstrip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 12px 18px;
+  border-top: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--surface) 82%, transparent);
+}
+
+.filmstrip-heading {
+  display: grid;
+  gap: 3px;
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.filmstrip-count {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.stage-filmstrip .filmstrip {
+  min-width: 0;
+  padding: 0;
+}
+
+.stage-filmstrip .film-thumb {
+  flex-basis: 66px;
+  height: 66px;
+}
+
+.filmstrip-empty {
+  padding: 9px 13px;
+  border: 1px dashed var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface-secondary);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+@media (max-width: 1120px) {
+  :root {
+    --nav-w: 76px;
+    --sidebar-w: 312px;
+  }
+
+  .stage-toolbar {
+    padding-inline: 12px;
+  }
+
+  .stage-context {
+    display: none;
+  }
+
+  .stage-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: var(--nav-w) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .nav-rail {
+    grid-row: 1 / 3;
+  }
+
+  .settings-sidebar {
+    grid-column: 2;
+    grid-row: 2;
+    max-height: 40vh;
+    border-top: 1px solid var(--hairline);
+    border-right: 0;
+  }
+
+  .settings-collapse {
+    display: inline-flex;
+  }
+
+  .settings-sidebar.is-collapsed {
+    max-height: 78px;
+  }
+
+  .settings-sidebar.is-collapsed .settings-tabs {
+    display: none;
+  }
+
+  .stage {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --nav-w: 58px;
+    --filmstrip-h: 88px;
+  }
+
+  .nav-rail {
+    padding-inline: 6px;
+  }
+
+  .nav-mark {
+    width: 36px;
+  }
+
+  .nav-item > span:last-child {
+    display: none;
+  }
+
+  .nav-item {
+    padding-inline: 2px;
+  }
+
+  .stage-toolbar {
+    padding-inline: 8px;
+  }
+
+  .toolbar-group {
+    gap: 3px;
+  }
+
+  .stage-toolbar .toolbar-group .text-sm,
+  .stage-toolbar .toolbar-group button:not([aria-label]) {
+    font-size: 10px;
+  }
+
+  .stage-filmstrip {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .filmstrip-heading {
+    display: none;
+  }
+
+  .settings-header {
+    padding-inline: 14px;
+  }
+
+  .settings-sidebar .panel-section {
+    padding-inline: 14px;
+  }
 }

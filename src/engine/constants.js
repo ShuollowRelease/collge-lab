@@ -1,4 +1,7 @@
+import { defaultFreeform } from "./freeform.js";
+
 export const LAYOUTS = [
+  { id: "custom", name: "自定义网格", hint: "拖拽编辑", thumb: [[2, 2, 46, 46], [52, 2, 46, 46], [2, 52, 46, 46], [52, 52, 46, 46]] },
   { id: "mosaic", name: "马赛克", hint: "大小瓷砖", thumb: [[0, 0, 55, 100], [58, 0, 42, 48], [58, 52, 42, 48]] },
   { id: "contact", name: "接触印相", hint: "等格印样", thumb: [[2, 2, 29, 29], [35, 2, 29, 29], [68, 2, 29, 29], [2, 35, 29, 29], [35, 35, 29, 29], [68, 35, 29, 29], [2, 68, 29, 29], [35, 68, 29, 29], [68, 68, 29, 29]] },
   { id: "editorial", name: "编辑风", hint: "一大 + 小格", thumb: [[0, 0, 52, 100], [55, 0, 45, 48], [55, 52, 45, 48]] },
@@ -39,6 +42,173 @@ export const RATIOS = {
 export const GAP = { none: 0, narrow: 8, standard: 16, wide: 32 };
 export const RADIUS = { none: 0, soft: 8, medium: 16, large: 28 };
 
+/**
+ * IG 发帖卡片 chrome 比例（相对画布 W/H，0–1）。
+ * 与 layoutIgPost 的媒体区对齐：头像行 → 照片 → 操作栏 → 点赞/文案。
+ */
+export const IG_CHROME = {
+  card: { x: 0.05, y: 0.06, w: 0.9, h: 0.88 },
+  cardRadiusRatio: 0.028,
+  padRatio: 0.045,
+  headerYRatio: 0.07,
+  mediaBottomRatio: 0.74,
+  avatarRatio: 0.055,
+  iconRatio: 0.038,
+  textMainRatio: 0.03,
+  textSubRatio: 0.024,
+};
+
+/**
+ * 音乐播放器 chrome 比例（Apple Music Now Playing 构图）。
+ * 大封面 → 曲名/艺人 → 进度条 → 控制条；全部 0–1 相对画布。
+ */
+export const PLAYER_CHROME = {
+  artRatio: 0.62,
+  artTopRatio: 0.1,
+  artRadiusRatio: 0.035,
+  titleTopRatio: 0.72,
+  artistTopRatio: 0.775,
+  progressYRatio: 0.84,
+  progressWRatio: 0.78,
+  progressHRatio: 0.012,
+  timeTopRatio: 0.88,
+  transportYRatio: 0.93,
+  iconRatio: 0.048,
+  playRatio: 0.088,
+  sideGapRatio: 0.16,
+};
+
+/** Apple Music 强调色（品牌红）；画布 chrome 与 Web 预设共用。 */
+export const PLAYER_ACCENT = "#fa2d48";
+export const PLAYER_ACCENT_SOFT = "rgba(250, 45, 72, 0.35)";
+
+export const DEFAULT_IG_STATS = { likes: "128", comments: "12", reposts: "4", shares: "4" };
+export const DEFAULT_YT_STATS = { likes: "1.2k", comments: "88", reposts: "" };
+export const DEFAULT_PLAYER_META = {
+  header: "",
+  track: "Now Playing",
+  artist: "photo-cut",
+  timeLeft: "1:24",
+  timeRight: "3:42",
+};
+
+/**
+ * YouTube 长视频 chrome 比例（播放器本体 + 标题区）。
+ * 16:9 主画面 → 底部渐变控制条 → 标题/频道行。
+ */
+export const YT_LONG_CHROME = {
+  /** 控制条高度相对画布 H */
+  controlsHRatio: 0.12,
+  progressYRatio: 0.78,
+  progressWRatio: 0.92,
+  progressHRatio: 0.01,
+  progressHoverHRatio: 0.018,
+  btnRatio: 0.042,
+  titleTopRatio: 0.88,
+  channelTopRatio: 0.935,
+  padRatio: 0.04,
+  playCircleRatio: 0.12,
+};
+
+/** yt-short 竖屏互动栏比例，Canvas 与网页覆盖层共用，确保不同画幅下不越界。 */
+export const YT_SHORT_CHROME = {
+  railXRatio: 0.79,
+  railWidthRatio: 0.17,
+  railTopRatio: 0.43,
+  railBottomRatio: 0.88,
+  iconRatio: 0.055,
+  itemStepRatio: 0.092,
+  countOffsetRatio: 0.066,
+};
+
+/** YouTube 品牌红；进度条与播放钮共用。 */
+export const YT_ACCENT = "#ff0000";
+export const YT_ACCENT_SOFT = "rgba(255, 0, 0, 0.35)";
+
+/* ------------------------------------------------------------------ *
+ * 自定义网格 · 高级编辑
+ * 所有几何一律用 0–1 归一化坐标：预览与导出共用同一份数据，
+ * 导出时 resolveExportSize() 换尺寸重画也不会变形。
+ * ------------------------------------------------------------------ */
+
+/** 单格最小边长（画布 CSS 像素）；拖拽时不允许把格子压得比它更小。 */
+export const CELL_MIN_PX = 44;
+/** 自定义网格行列数上限，防止格子小到无法操作。 */
+export const GRID_LIMIT = 8;
+/** 撤销栈深度（仅本次会话，不进 localStorage）。 */
+export const UNDO_MAX = 40;
+/** 分隔线 / 交叉点的命中半径，单位：画布 CSS 像素。 */
+export const HANDLE_HIT_PX = 10;
+/** 拖拽过程允许越界像素，用于区分「点击选择」与「拖动几何」。 */
+export const DRAG_ACTIVE_PX = 3;
+/** 叠加/删除行列时，新分隔线插在该间隙的比例位置。 */
+export const DIVIDER_SPLIT_RATIO = 0.5;
+
+/** 形状可用性由 shapes.js 定义，这里只放分组与默认值，避免两份字面量。 */
+export const SHAPE_GROUPS = [
+  { id: "basic", label: "基础形", items: ["rounded", "circle", "ellipse", "squircle"] },
+  { id: "solid", label: "实心形", items: ["heart", "hexagon", "diamond", "pentagon", "star"] },
+  { id: "cut", label: "切角形", items: ["arch", "blob", "triangle", "halfCircle", "quarterCircle", "speech"] },
+];
+
+const SHAPE_LABELS = {
+  rounded: "圆角矩形",
+  circle: "正圆",
+  ellipse: "椭圆",
+  squircle: "超椭圆",
+  heart: "爱心",
+  hexagon: "六边形",
+  diamond: "菱形",
+  pentagon: "五边形",
+  star: "星形",
+  arch: "拱形",
+  blob: "云朵",
+  triangle: "三角",
+  halfCircle: "半圆",
+  quarterCircle: "四分之一圆",
+  speech: "对话气泡",
+};
+
+/** SHAPES 字典：id → 中文名。与 shapes.js 的几何表一一对应。 */
+export const SHAPES = Object.fromEntries(
+  Object.entries(SHAPE_LABELS).map(([id, name]) => [id, { id, name }])
+);
+
+/** 形状蒙版「自适应完整显示」：留白不裁切。 */
+export const SHAPE_FITS = {
+  cover: { id: "cover", label: "填充格子" },
+  contain: { id: "contain", label: "完整显示" },
+};
+
+/** 默认形状：面板与绘制共用的单一来源，禁止在 UI 里写字面量。 */
+export const DEFAULT_SHAPE_ID = "heart";
+
+/** 默认外边框与格间距，单位与 GAP 一致（800px 基准下的像素，按画布缩放）。 */
+export const GRID_PAD = { outer: 12, gap: 10 };
+/** 上述像素值的基准边长：与 GAP / RADIUS 的 800 基准一致。 */
+export const GRID_PAD_BASE = 800;
+
+export function nodeKey(c, r) {
+  return `${c},${r}`;
+}
+
+export function defaultCustomGrid() {
+  return {
+    on: false,
+    mode: "grid",
+    rows: 2,
+    cols: 3,
+    colsX: [0, 1 / 3, 2 / 3, 1],
+    rowsY: [0, 0.5, 1],
+    nodes: {},
+    shapes: {},
+    outerPad: GRID_PAD.outer,
+    cellGap: GRID_PAD.gap,
+    fits: {},
+    freeform: defaultFreeform(),
+  };
+}
+
 export const FONTS = {
   gothic: { display: '"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif', weight: "700" },
   mincho: { display: 'Georgia, "Songti SC", "SimSun", serif', weight: "500" },
@@ -56,6 +226,64 @@ export const SIG_FONTS = {
   gothic: { display: '"Segoe UI", "PingFang SC", sans-serif', weight: "600" },
 };
 
+export const SIG_POSITIONS = [
+  { id: "tl", label: "左上" },
+  { id: "tc", label: "顶部居中" },
+  { id: "tr", label: "右上" },
+  { id: "ml", label: "左中" },
+  { id: "c", label: "居中" },
+  { id: "mr", label: "右中" },
+  { id: "bl", label: "左下" },
+  { id: "bc", label: "底部居中" },
+  { id: "br", label: "右下" },
+  { id: "free", label: "自由位置" },
+];
+
+export const SIG_ANCHORS = {
+  tl: [0.12, 0.12],
+  tc: [0.5, 0.12],
+  tr: [0.88, 0.12],
+  ml: [0.12, 0.52],
+  c: [0.5, 0.56],
+  mr: [0.88, 0.52],
+  bl: [0.12, 0.9],
+  bc: [0.5, 0.9],
+  br: [0.88, 0.9],
+};
+export const SIG_DEFAULT_FREE_POINT = [0.88, 0.9];
+
+export const SIG_EFFECTS = [
+  { id: "soft", label: "柔和阴影" },
+  { id: "ink", label: "强调色" },
+  { id: "glow", label: "微光" },
+  { id: "plain", label: "纯色" },
+];
+
+export const SIGNATURE_ASSET_LIMIT = 8 * 1024 * 1024;
+export const SIGNATURE_IMAGE_TYPES = ["image/png", "image/svg+xml"];
+export const SIGNATURE_FONT_TYPES = ["font/ttf", "font/otf", "font/woff", "font/woff2"];
+export const SIGNATURE_FREE_MARGIN = 0.04;
+export const SIGNATURE_IMAGE_HEIGHT_RATIO = 1.35;
+export const PLAYER_MINOR_ICON_RATIO = 0.72;
+export const SIGNATURE_KEY_STEP = 0.005;
+export const SIGNATURE_KEY_FAST_STEP = 0.05;
+export const DEFAULT_PLAYER_PROGRESS = 0.38;
+export const DEFAULT_PLAYER_BUFFERED = 0.62;
+export const DEFAULT_VIDEO_PROGRESS = 0.42;
+/** 播放器进度轨道的视觉宽度（相对可用容器宽度的百分比），与播放状态完全独立。 */
+export const PROGRESS_TRACK_WIDTH = {
+  default: 78,
+  min: 35,
+  max: 95,
+  step: 1,
+};
+
+export function normalizeProgressTrackWidth(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return PROGRESS_TRACK_WIDTH.default;
+  return Math.min(PROGRESS_TRACK_WIDTH.max, Math.max(PROGRESS_TRACK_WIDTH.min, numeric));
+}
+
 export function defaultSignature() {
   return {
     enabled: true,
@@ -66,7 +294,18 @@ export function defaultSignature() {
     rotate: -6,
     opacity: 0.72,
     pos: "br",
+    x: SIG_DEFAULT_FREE_POINT[0],
+    y: SIG_DEFAULT_FREE_POINT[1],
+    color: "ink",
+    imageData: "",
+    imageAsset: null,
+    customFont: null,
   };
+}
+
+/** 当前选中的形状蒙版，默认内容不进画布（仅面板初值）。 */
+export function defaultShapePick() {
+  return { shape: DEFAULT_SHAPE_ID, fit: "cover" };
 }
 
 export function defaultState() {
@@ -93,13 +332,31 @@ export function defaultState() {
     font: "gothic",
     fontSub: "gothic",
     glow: false,
-    ui: { subs: false, autoplay: false, live: false, playing: true, liked: false, showCounts: false, iconTheme: "twitter" },
-    ytStats: { likes: "", comments: "", reposts: "" },
-    igStats: { likes: "", comments: "", reposts: "", shares: "" },
+    ui: {
+      subs: false,
+      autoplay: false,
+      live: false,
+      playing: true,
+      liked: false,
+      bookmarked: false,
+      ytCommented: false,
+      ytShared: false,
+      showCounts: false,
+      iconTheme: "twitter",
+      muted: false,
+      playerProgress: DEFAULT_PLAYER_PROGRESS,
+      playerBuffered: DEFAULT_PLAYER_BUFFERED,
+      progressTrackWidth: PROGRESS_TRACK_WIDTH.default,
+      shuffle: false,
+      repeat: false,
+      lyrics: false,
+    },
+    ytStats: { ...DEFAULT_YT_STATS },
+    igStats: { ...DEFAULT_IG_STATS },
     igCaption: "",
     igBrand: "",
-    playerMeta: { header: "", track: "", artist: "", timeLeft: "", timeRight: "" },
-    playerColor: "#7c3aed",
+    playerMeta: { ...DEFAULT_PLAYER_META },
+    playerColor: PLAYER_ACCENT,
     exportSize: "ig",
     exportFormat: "jpg",
     maxMB: 2,
@@ -108,5 +365,7 @@ export function defaultState() {
     activeId: null,
     editMode: "crop",
     signature: defaultSignature(),
+    customGrid: defaultCustomGrid(),
+    shapePick: defaultShapePick(),
   };
 }

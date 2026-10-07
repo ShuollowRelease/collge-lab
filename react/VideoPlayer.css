@@ -1,0 +1,310 @@
+/* Twitter / X 风格播放器 — 与 VideoPlayer.jsx 配套
+ * 颜色 / 尺寸全部走 CSS 变量；图标使用 currentColor。
+ */
+
+.x-player {
+  --player-bg: #000000;
+  --player-card-radius: 16px;
+  --player-icon-color: #ffffff;
+  --player-text: #ffffff;
+  --player-text-muted: rgba(255, 255, 255, 0.78);
+  --player-btn-bg: rgba(27, 27, 27, 0.55);
+  --player-btn-bg-hover: rgba(27, 27, 27, 0.75);
+  --player-progress-track: rgba(255, 255, 255, 0.28);
+  --player-progress-fill: #ffffff;
+  --player-progress-thumb: #ffffff;
+  --player-focus: #1d9bf0;
+  --player-btn-size: 40px;
+  --player-icon-size: 22px;
+  --player-center-size: 72px;
+
+  position: relative;
+  width: 100%;
+  border-radius: var(--player-card-radius);
+  overflow: hidden;
+  background: var(--player-bg);
+  color: var(--player-text);
+  isolation: isolate;
+  user-select: none;
+  font-family: inherit;
+}
+
+.x-player:focus-visible {
+  outline: 2px solid var(--player-focus);
+  outline-offset: 3px;
+}
+
+.x-player-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--player-bg);
+  overflow: hidden;
+}
+
+.x-player-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--player-bg);
+}
+
+.x-player-hit {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.x-player-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: var(--player-center-size);
+  height: var(--player-center-size);
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--player-icon-color);
+  background: var(--player-btn-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.x-player-center:hover {
+  background: var(--player-btn-bg-hover);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.x-player-center:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.x-player-center svg {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+.x-player.is-playing:not(.is-controls-visible) .x-player-center {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.x-player.is-paused .x-player-center {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.x-player-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 12px 10px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.72) 0%,
+    rgba(0, 0, 0, 0.38) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  transition: opacity 0.22s ease;
+}
+
+.x-player.is-playing:not(.is-controls-visible) .x-player-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.x-player-progress {
+  position: relative;
+  width: 100%;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.x-player-progress-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--player-progress-track);
+  transition: height 0.12s ease;
+}
+
+.x-player-progress:hover .x-player-progress-track,
+.x-player-progress.is-dragging .x-player-progress-track {
+  height: 6px;
+}
+
+.x-player-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: var(--player-progress-fill);
+  pointer-events: none;
+}
+
+.x-player-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 999px;
+  background: var(--player-progress-thumb);
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.12s ease;
+  pointer-events: none;
+}
+
+.x-player-progress:hover .x-player-progress-thumb,
+.x-player-progress.is-dragging .x-player-progress-thumb {
+  transform: translateY(-50%) scale(1);
+}
+
+.x-player-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 52px;
+}
+
+.x-player-bar-left,
+.x-player-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.x-player-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--player-text-muted);
+}
+
+.x-player-time .sep {
+  opacity: 0.55;
+}
+
+.x-player-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--player-icon-color);
+  width: var(--player-btn-size);
+  height: var(--player-btn-size);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.92;
+  transition: opacity 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.x-player-btn:hover {
+  opacity: 1;
+  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.x-player-btn:active {
+  transform: scale(0.94);
+}
+
+.x-player-btn:focus-visible {
+  outline: 2px solid var(--player-focus);
+  outline-offset: 2px;
+}
+
+.x-player-btn svg {
+  width: var(--player-icon-size);
+  height: var(--player-icon-size);
+  display: block;
+  pointer-events: none;
+}
+
+.x-player-volume-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.x-player-volume-slider {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: width 0.18s ease, opacity 0.18s ease, margin 0.18s ease;
+  pointer-events: none;
+}
+
+.x-player-volume-wrap:hover .x-player-volume-slider,
+.x-player-volume-wrap:focus-within .x-player-volume-slider {
+  width: 72px;
+  opacity: 1;
+  margin-left: 4px;
+  pointer-events: auto;
+}
+
+.x-player-volume-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--player-progress-track);
+  outline: none;
+  cursor: pointer;
+}
+
+.x-player-volume-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--player-progress-thumb);
+  border: 0;
+}
+
+.x-player.is-fullscreen {
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.x-player.is-fullscreen .x-player-stage {
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+@media (max-width: 560px) {
+  .x-player {
+    --player-center-size: 60px;
+    --player-icon-size: 20px;
+  }
+}

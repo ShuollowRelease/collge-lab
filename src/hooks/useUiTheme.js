@@ -9,7 +9,8 @@ function readStored() {
   } catch {
     /* ignore */
   }
-  return "system";
+  // 工作台默认保持深色，用户仍可在左侧底部切换浅色或跟随系统。
+  return "dark";
 }
 
 function systemPrefersDark() {

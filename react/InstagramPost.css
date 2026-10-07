@@ -1,0 +1,268 @@
+/* Instagram 发帖卡片 — 与 InstagramPost.jsx 配套
+ * 颜色 / 尺寸全部走 CSS 变量；图标 currentColor。
+ */
+
+.ins-post {
+  --ins-bg: #ffffff;
+  --ins-border: #dbdbdb;
+  --ins-text: #262626;
+  --ins-text-muted: #8e8e8e;
+  --ins-icon-color: #262626;
+  --ins-accent: #ed4956;
+  --ins-link: #00376b;
+  --ins-focus: #1d9bf0;
+  --ins-radius: 12px;
+  --ins-icon-size: 24px;
+  --ins-btn-size: 40px;
+  --ins-avatar: 32px;
+  --ins-media-ratio: 1 / 1;
+
+  background: var(--ins-bg);
+  border: 1px solid var(--ins-border);
+  border-radius: var(--ins-radius);
+  overflow: hidden;
+  color: var(--ins-text);
+  font-family: inherit;
+  max-width: 480px;
+}
+
+.ins-post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.ins-post-avatar {
+  width: var(--ins-avatar);
+  height: var(--ins-avatar);
+  border-radius: 999px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.ins-post-avatar-fallback {
+  background: linear-gradient(135deg, #f58529, #dd2a7b 45%, #8134af 75%, #515bd4);
+}
+
+.ins-post-user {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ins-post-username {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ins-post-meta {
+  font-size: 11px;
+  color: var(--ins-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ins-post-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--ins-media-ratio);
+  background: #efefef;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ins-post-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ins-post-media-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--ins-text-muted);
+  font-size: 13px;
+  background: linear-gradient(145deg, #f0e6d8, #d8c4b0);
+}
+
+.ins-post-heart-pop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  color: #ffffff;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.35));
+}
+
+.ins-post-heart-pop svg {
+  width: 72px;
+  height: 72px;
+}
+
+.ins-post-heart-pop.is-on {
+  animation: insPostHeartPop 0.7s ease;
+}
+
+@keyframes insPostHeartPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+.ins-post-actions {
+  display: flex;
+  align-items: center;
+  padding: 4px 4px 0;
+}
+
+.ins-post-actions-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.ins-post-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ins-icon-color);
+  width: var(--ins-btn-size);
+  height: var(--ins-btn-size);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.95;
+  transition: opacity 0.16s ease, transform 0.16s ease, color 0.16s ease;
+}
+
+.ins-post-btn:hover {
+  opacity: 0.7;
+  transform: scale(1.08);
+}
+
+.ins-post-btn:active {
+  transform: scale(0.92);
+}
+
+.ins-post-btn:focus-visible {
+  outline: 2px solid var(--ins-focus);
+  outline-offset: 2px;
+}
+
+.ins-post-btn svg {
+  width: var(--ins-icon-size);
+  height: var(--ins-icon-size);
+  display: block;
+  pointer-events: none;
+}
+
+.ins-post-btn.is-liked {
+  color: var(--ins-accent);
+  opacity: 1;
+}
+
+.ins-post-btn.is-saved {
+  opacity: 1;
+}
+
+.ins-post-btn.is-spring {
+  animation: insPostSpring 0.45s ease;
+}
+
+@keyframes insPostSpring {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.25);
+  }
+  65% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.ins-post-body {
+  padding: 6px 14px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ins-post-likes {
+  font-weight: 600;
+  margin: 2px 0 6px;
+}
+
+.ins-post-caption {
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.ins-post-caption .user {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.ins-post-more-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ins-text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ins-post-more-link:hover {
+  color: var(--ins-text);
+}
+
+.ins-post-time {
+  margin-top: 8px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ins-text-muted);
+}
+
+/* 深色模式：父级或 html 上加 .ins-post-dark 即可 */
+.ins-post-dark.ins-post,
+.ins-post-dark .ins-post {
+  --ins-bg: #000000;
+  --ins-border: #262626;
+  --ins-text: #f5f5f5;
+  --ins-text-muted: #a8a8a8;
+  --ins-icon-color: #f5f5f5;
+  --ins-link: #e0f1ff;
+}

@@ -1,6 +1,11 @@
-import { GAP, RADIUS, RATIOS } from "./constants.js";
+import { GAP, GRID_PAD_BASE, IG_CHROME, RADIUS, RATIOS } from "./constants.js";
+import { buildCustomGrid } from "./grid.js";
+import { buildFreeformGeometry, resolveRegionSetting } from "./freeform.js";
+import { hasShape } from "./shapes.js";
+import { resolveLayoutCapabilities } from "./presets.js";
 
 export function gapPx(state, W, H) {
+  if (!resolveLayoutCapabilities(state).gap) return 0;
   const base = Math.min(W, H);
   const raw = GAP[state.gap] ?? GAP.standard;
   return Math.round(raw * (base / 800));
@@ -10,6 +15,29 @@ export function radiusPx(state, W, H) {
   const base = Math.min(W, H);
   const raw = RADIUS[state.radius] ?? RADIUS.soft;
   return Math.round(raw * (base / 800));
+}
+
+/**
+ * 自定义网格专用：外边框 / 格间距与 GAP 走同一套 800 基准缩放，
+ * 保证预览与导出（不同像素尺寸）观感一致。
+ */
+export function gridPadPx(state, W, H) {
+  const base = Math.min(W, H);
+  const scale = base / GRID_PAD_BASE;
+  const grid = state.customGrid || {};
+  return {
+    outer: Math.round((Number(grid.outerPad) || 0) * scale),
+    gap: Math.round((Number(grid.cellGap) || 0) * scale),
+  };
+}
+
+/** 自定义网格几何（预览与编辑层共用同一构造，避免两份实现）。 */
+export function customGridGeometry(state, W, H) {
+  if (state.customGrid?.mode === "freeform") {
+    return buildFreeformGeometry(state.customGrid.freeform, W, H);
+  }
+  const { outer, gap } = gridPadPx(state, W, H);
+  return buildCustomGrid(state.customGrid, W, H, { pad: outer, gap });
 }
 
 export function colCountFor(state, n) {
@@ -216,27 +244,76 @@ function layoutCircle(photos, W, H) {
 function layoutIgPost(photos, W, H) {
   const n = photos.length;
   if (n === 0) return [];
-  const pad = W * 0.08;
-  const top = H * 0.12;
-  const areaW = W - pad * 2;
-  const areaH = H * 0.62;
-  if (n === 1) return [{ x: pad, y: top, w: areaW, h: areaH, polaroid: true }];
+  // 与 IG_CHROME 卡片/媒体区对齐：头像行之下、操作栏之上
+  const contentW = W * IG_CHROME.card.w - W * IG_CHROME.padRatio * 2;
+  const left = (W - contentW) / 2;
+  const top = H * 0.14;
+  const areaH = H * IG_CHROME.mediaBottomRatio - top;
+  if (n === 1) return [{ x: left, y: top, w: contentW, h: areaH }];
   const cols = n <= 2 ? 2 : n <= 4 ? 2 : 3;
   const rows = Math.ceil(n / cols);
-  const g = W * 0.03;
-  const cw = (areaW - g * (cols - 1)) / cols;
+  const g = W * 0.025;
+  const cw = (contentW - g * (cols - 1)) / cols;
   const ch = (areaH - g * (rows - 1)) / rows;
   return photos.map((_, i) => ({
-    x: pad + (i % cols) * (cw + g),
+    x: left + (i % cols) * (cw + g),
     y: top + Math.floor(i / cols) * (ch + g),
     w: cw,
     h: ch,
   }));
 }
 
+/**
+ * 自定义网格 → 槽位。
+ * 规则矩形走圆角矩形快路径；被节点拖成不规则四边形的格子走 poly 裁剪。
+ * 套了形状蒙版的格子：形状决定显示区域，忽略圆角。
+ */
+export function layoutCustomGrid(state, photos, W, H) {
+  const geo = customGridGeometry(state, W, H);
+  if (geo.kind === "freeform") {
+    return geo.regions.map((region, index) => {
+      const setting = resolveRegionSetting(geo.graph, region.id);
+      const bounds = region.bounds;
+      const photo = photos[index] || photos[0] || null;
+      const sourceId = setting.mode === "shared" ? setting.sourceId || setting.photoId || photo?.id || null : null;
+      const selectedPhoto = sourceId ? photos.find((item) => item.id === sourceId) || photo : photos.find((item) => item.id === setting.photoId) || photo;
+      return {
+        x: bounds.x * W,
+        y: bounds.y * H,
+        w: Math.max(1, bounds.w * W),
+        h: Math.max(1, bounds.h * H),
+        poly: region.pointsPx,
+        regionId: region.id,
+        freeform: true,
+        imageMode: setting.mode === "shared" ? "shared" : "independent",
+        sourceId,
+        photoId: selectedPhoto?.id || null,
+        crop: setting.crop || selectedPhoto?.crop,
+        fit: setting.fit || "cover",
+        freeformGeometry: geo,
+      };
+    });
+  }
+  return geo.cells.map((cell, i) => {
+    if (i >= photos.length) return null;
+    const { x, y, w, h } = cell.rect;
+    const shaped = hasShape(cell.shape);
+    const slot = { x, y, w, h };
+    if (shaped) {
+      slot.shape = cell.shape;
+      slot.fit = cell.fit;
+    } else if (!cell.plain) {
+      slot.poly = cell.pts;
+    }
+    return slot;
+  });
+}
+
 export function computeSlots(state, photos, W, H, g) {
   const cols = colCountFor(state, photos.length || 1);
   switch (state.layout) {
+    case "custom":
+      return layoutCustomGrid(state, photos, W, H);
     case "mosaic":
       return layoutMosaic(photos, W, H, g);
     case "contact":
@@ -268,17 +345,18 @@ export function computeSlots(state, photos, W, H, g) {
       return photos.length ? [{ x: 0, y: 0, w: W, h: H, fullBleed: true }] : [];
     case "yt-panel": {
       if (!photos.length) return [];
-      const mainH = H * 0.58;
-      const panelY = mainH + g;
-      const panelH = H - panelY;
-      const slots = [{ x: 0, y: 0, w: W, h: mainH, fullBleed: true }];
+      // YouTube 观看页：上 16:9 主视频（控制条叠在视频底部），下标题/相关缩略
+      const videoH = Math.min(H * 0.7, (W * 9) / 16);
+      const slots = [{ x: 0, y: 0, w: W, h: videoH, fullBleed: true }];
       const rest = photos.slice(1);
       if (!rest.length) return slots;
+      const panelY = videoH + g;
+      const panelH = Math.max(0, H - panelY);
       const n = Math.min(rest.length, 4);
       const tw = (W - g * (n - 1)) / n;
-      const th = panelH * 0.55;
+      const th = panelH * 0.72;
       for (let i = 0; i < n; i++) {
-        slots.push({ x: i * (tw + g), y: panelY + panelH * 0.08, w: tw, h: th });
+        slots.push({ x: i * (tw + g), y: panelY + panelH * 0.06, w: tw, h: th });
       }
       return slots;
     }

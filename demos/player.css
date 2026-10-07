@@ -1,0 +1,508 @@
+/* Twitter / X 网页端视频播放器 · 视觉层
+ * 颜色与尺寸走 CSS 变量，便于深色模式与主题复用。
+ */
+
+:root {
+  --player-bg: #000000;
+  --player-card-radius: 16px;
+  --player-icon-color: #ffffff;
+  --player-icon-muted: rgba(255, 255, 255, 0.72);
+  --player-text: #ffffff;
+  --player-text-muted: rgba(255, 255, 255, 0.78);
+  --player-scrim: rgba(0, 0, 0, 0.55);
+  --player-control-bg: rgba(0, 0, 0, 0.45);
+  --player-btn-bg: rgba(27, 27, 27, 0.55);
+  --player-btn-bg-hover: rgba(27, 27, 27, 0.75);
+  --player-progress-track: rgba(255, 255, 255, 0.28);
+  --player-progress-fill: #ffffff;
+  --player-progress-thumb: #ffffff;
+  --player-focus: #1d9bf0;
+  --player-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+  --player-control-h: 52px;
+  --player-icon-size: 22px;
+  --player-btn-size: 40px;
+  --player-center-size: 72px;
+  --player-progress-h: 4px;
+  --player-progress-hit: 16px;
+}
+
+/* 深色模式：图标/文字保持高对比白字；页面底色可切 */
+html.player-theme-dark,
+html.player-theme-dark body {
+  background: #15202b;
+  color: var(--player-text);
+}
+
+html.player-theme-light body {
+  background: #f7f9f9;
+  color: #0f1419;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--player-font);
+  background: #15202b;
+  color: #e7e9ea;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 16px 48px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.page-head h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.page-head p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(231, 233, 234, 0.72);
+  max-width: 42em;
+}
+
+.theme-toggle {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.03);
+}
+
+/* ─── 播放器卡片 ─────────────────────────────────────────── */
+
+.player {
+  position: relative;
+  width: 100%;
+  border-radius: var(--player-card-radius);
+  overflow: hidden;
+  background: var(--player-bg);
+  isolation: isolate;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.player:focus-visible {
+  outline: 2px solid var(--player-focus);
+  outline-offset: 3px;
+}
+
+.player-stage {
+  position: relative;
+  width: 100%;
+  /* 自适应 16:9；竖片可由 --player-aspect 覆盖 */
+  aspect-ratio: var(--player-aspect, 16 / 9);
+  background: var(--player-bg);
+  overflow: hidden;
+}
+
+.player-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--player-bg);
+  vertical-align: middle;
+}
+
+.player.is-idle .player-video {
+  object-fit: cover;
+}
+
+/* 点击区：整块视频可点播放/暂停 */
+.player-hit {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* ─── 居中播放按钮 ───────────────────────────────────────── */
+
+.player-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: var(--player-center-size);
+  height: var(--player-center-size);
+  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--player-icon-color);
+  background: var(--player-btn-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.2s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.player-center:hover {
+  background: var(--player-btn-bg-hover);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.player-center:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.player-center:focus-visible {
+  outline: 2px solid var(--player-focus);
+  outline-offset: 3px;
+}
+
+.player-center svg {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+/* 播放中默认隐藏居中钮（hover / 暂停时显示）——对齐 X 的轻量手势 */
+.player.is-playing:not(:hover):not(.is-paused):not(.is-fullscreen)
+  .player-center {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player.is-playing:hover .player-center {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.player.is-paused .player-center {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ─── 底部控制栏 ─────────────────────────────────────────── */
+
+.player-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 12px 10px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.72) 0%,
+    rgba(0, 0, 0, 0.38) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  opacity: 1;
+  transition: opacity 0.22s ease;
+}
+
+.player.is-playing:not(:hover):not(.is-paused):not(.is-seeking)
+  .player-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player.is-playing:hover .player-controls,
+.player.is-paused .player-controls,
+.player.is-seeking .player-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ─── 进度条 ─────────────────────────────────────────────── */
+
+.player-progress {
+  position: relative;
+  width: 100%;
+  height: var(--player-progress-hit);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.player-progress-track {
+  position: relative;
+  width: 100%;
+  height: var(--player-progress-h);
+  border-radius: 999px;
+  background: var(--player-progress-track);
+  overflow: visible;
+  transition: height 0.12s ease;
+}
+
+.player-progress:hover .player-progress-track,
+.player-progress.is-dragging .player-progress-track {
+  height: 6px;
+}
+
+.player-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--player-progress-fill);
+  pointer-events: none;
+}
+
+.player-progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 999px;
+  background: var(--player-progress-thumb);
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.12s ease;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.player-progress:hover .player-progress-thumb,
+.player-progress.is-dragging .player-progress-thumb {
+  transform: translateY(-50%) scale(1);
+}
+
+/* ─── 控制行 ─────────────────────────────────────────────── */
+
+.player-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--player-control-h);
+  color: var(--player-text);
+}
+
+.player-bar-left,
+.player-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.player-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--player-text-muted);
+  white-space: nowrap;
+}
+
+.player-time .sep {
+  opacity: 0.55;
+}
+
+/* ─── 按钮 ───────────────────────────────────────────────── */
+
+.player-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--player-icon-color);
+  width: var(--player-btn-size);
+  height: var(--player-btn-size);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.92;
+  transition: opacity 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.player-btn:hover {
+  opacity: 1;
+  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.player-btn:active {
+  transform: scale(0.94);
+  opacity: 0.85;
+}
+
+.player-btn:focus-visible {
+  outline: 2px solid var(--player-focus);
+  outline-offset: 2px;
+}
+
+.player-btn svg {
+  width: var(--player-icon-size);
+  height: var(--player-icon-size);
+  display: block;
+  pointer-events: none;
+}
+
+.player-btn[aria-pressed="true"] {
+  opacity: 1;
+}
+
+/* 音量浮层 */
+.player-volume-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.player-volume-slider {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: width 0.18s ease, opacity 0.18s ease, margin 0.18s ease;
+  margin-left: 0;
+  pointer-events: none;
+}
+
+.player-volume-wrap:hover .player-volume-slider,
+.player-volume-wrap:focus-within .player-volume-slider {
+  width: 72px;
+  opacity: 1;
+  margin-left: 4px;
+  pointer-events: auto;
+}
+
+.player-volume-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--player-progress-track);
+  outline: none;
+  cursor: pointer;
+}
+
+.player-volume-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--player-progress-thumb);
+  border: 0;
+  cursor: pointer;
+}
+
+.player-volume-slider input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--player-progress-thumb);
+  border: 0;
+  cursor: pointer;
+}
+
+/* 全屏时圆角去掉 */
+.player.is-fullscreen {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.player.is-fullscreen .player-stage {
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+/* ─── 图标说明区（演示页附属，非播放器本体） ─────────────── */
+
+.icon-notes {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.icon-notes h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.icon-notes dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.icon-notes dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--player-icon-muted);
+  font-variant: normal;
+}
+
+.icon-notes dd {
+  margin: 0;
+  color: rgba(231, 233, 234, 0.82);
+}
+
+.icon-notes svg {
+  width: 18px;
+  height: 18px;
+  color: var(--player-icon-color);
+}
+
+@media (max-width: 560px) {
+  :root {
+    --player-center-size: 60px;
+    --player-icon-size: 20px;
+  }
+
+  .page-head {
+    flex-direction: column;
+  }
+}

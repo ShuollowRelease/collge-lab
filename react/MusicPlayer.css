@@ -1,0 +1,270 @@
+/* Apple Music 风格播放器 — 与 MusicPlayer.jsx 配套 */
+
+.am-player-ui {
+  --am-bg: #1c1c1e;
+  --am-icon-color: rgba(255, 255, 255, 0.92);
+  --am-text: #ffffff;
+  --am-text-muted: rgba(255, 255, 255, 0.58);
+  --am-accent: #fa2d48;
+  --am-accent-soft: rgba(250, 45, 72, 0.35);
+  --am-progress-track: rgba(255, 255, 255, 0.18);
+  --am-focus: #0a84ff;
+  --am-icon-size: 22px;
+  --am-btn-size: 44px;
+  --am-play-size: 72px;
+
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 22px 22px 26px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(28, 28, 30, 0.95), rgba(18, 18, 20, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  color: var(--am-text);
+  font-family: inherit;
+  overflow: hidden;
+}
+
+.am-player-ui::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(80% 55% at 50% 0%, var(--am-accent-soft), transparent 70%);
+  pointer-events: none;
+}
+
+.am-player-ui > * {
+  position: relative;
+  z-index: 1;
+}
+
+.am-ui-art {
+  width: min(100%, 320px);
+  margin: 4px auto 18px;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: linear-gradient(145deg, #3a2030, #1a1030);
+}
+
+.am-ui-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.am-ui-art-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+}
+
+.am-ui-meta {
+  margin: 0 2px 14px;
+}
+
+.am-ui-track {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-ui-artist {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--am-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-ui-progress {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+  margin-bottom: 2px;
+}
+
+.am-ui-progress-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--am-progress-track);
+  transition: height 0.12s ease;
+}
+
+.am-ui-progress:hover .am-ui-progress-track,
+.am-ui-progress.is-dragging .am-ui-progress-track {
+  height: 6px;
+}
+
+.am-ui-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: var(--am-accent);
+  pointer-events: none;
+}
+
+.am-ui-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin-left: -6.5px;
+  border-radius: 999px;
+  background: var(--am-text);
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.12s ease;
+  pointer-events: none;
+}
+
+.am-ui-progress:hover .am-ui-progress-thumb,
+.am-ui-progress.is-dragging .am-ui-progress-thumb {
+  transform: translateY(-50%) scale(1);
+}
+
+.am-ui-times {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--am-text-muted);
+}
+
+.am-ui-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 6px 0 10px;
+}
+
+.am-ui-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--am-icon-color);
+  width: var(--am-btn-size);
+  height: var(--am-btn-size);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.16s ease, transform 0.16s ease, color 0.16s ease;
+}
+
+.am-ui-btn:hover {
+  opacity: 0.72;
+  transform: scale(1.08);
+}
+
+.am-ui-btn:active {
+  transform: scale(0.94);
+}
+
+.am-ui-btn:focus-visible {
+  outline: 2px solid var(--am-focus);
+  outline-offset: 2px;
+}
+
+.am-ui-btn svg {
+  width: var(--am-icon-size);
+  height: var(--am-icon-size);
+  display: block;
+  pointer-events: none;
+}
+
+.am-ui-btn.is-on {
+  color: var(--am-accent);
+  opacity: 1;
+}
+
+.am-ui-btn-play {
+  width: var(--am-play-size);
+  height: var(--am-play-size);
+  background: var(--am-accent);
+  color: #fff;
+  box-shadow: 0 8px 22px var(--am-accent-soft);
+}
+
+.am-ui-btn-play:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  background: #ff3b52;
+}
+
+.am-ui-btn-play svg {
+  width: 30px;
+  height: 30px;
+}
+
+.am-ui-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.am-ui-volume-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.am-ui-volume-slider {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.am-ui-volume-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--am-progress-track);
+  outline: none;
+  cursor: pointer;
+}
+
+.am-ui-volume-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--am-text);
+  border: 0;
+}
+
+.am-ui-side {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}

@@ -1,0 +1,566 @@
+/* YouTube 长视频播放器 · 视觉层
+ * 颜色/尺寸走 CSS 变量；图标 currentColor。
+ */
+
+:root {
+  --yt-bg: #0f0f0f;
+  --yt-surface: #212121;
+  --yt-elevated: #3f3f3f;
+  --yt-text: #f1f1f1;
+  --yt-text-secondary: #aaaaaa;
+  --yt-icon: #f1f1f1;
+  --yt-accent: #ff0000;
+  --yt-accent-soft: rgba(255, 0, 0, 0.35);
+  --yt-blue: #3ea6ff;
+  --yt-focus: #3ea6ff;
+  --yt-radius: 12px;
+  --yt-font: "Roboto", "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --yt-icon-size: 24px;
+  --yt-btn-size: 42px;
+  --yt-progress-h: 3px;
+  --yt-progress-hit: 16px;
+}
+
+html.yt-theme-light {
+  --yt-bg: #ffffff;
+  --yt-surface: #f2f2f2;
+  --yt-elevated: #e5e5e5;
+  --yt-text: #0f0f0f;
+  --yt-text-secondary: #606060;
+  --yt-icon: #0f0f0f;
+}
+
+html.yt-theme-light body {
+  background: var(--yt-bg);
+  color: var(--yt-text);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--yt-font);
+  background: var(--yt-bg);
+  color: var(--yt-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.page-head h1 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.page-head p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--yt-text-secondary);
+  max-width: 52em;
+}
+
+.theme-toggle {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 18px;
+  border: 1px solid var(--yt-elevated);
+  background: transparent;
+  color: var(--yt-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: var(--yt-elevated);
+}
+
+/* ─── 播放器 ─────────────────────────────────────────────── */
+
+.yt-player {
+  width: 100%;
+  border-radius: var(--yt-radius);
+  overflow: hidden;
+  background: #000;
+  isolation: isolate;
+}
+
+.yt-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.yt-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  vertical-align: middle;
+}
+
+.yt-hit {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* 居中大播放钮 */
+.yt-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: 68px;
+  height: 68px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.yt-center:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.yt-center:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.yt-center:focus-visible {
+  outline: 2px solid var(--yt-focus);
+  outline-offset: 3px;
+}
+
+.yt-center svg {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+
+.yt-player.is-playing:not(:hover):not(.is-paused):not(.is-seeking) .yt-center {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.yt-player.is-playing:hover .yt-center,
+.yt-player.is-paused .yt-center {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ─── 控制条 ─────────────────────────────────────────────── */
+
+.yt-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 28px 12px 8px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.35) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  transition: opacity 0.2s ease;
+}
+
+.yt-player.is-playing:not(:hover):not(.is-paused):not(.is-seeking) .yt-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.yt-player.is-playing:hover .yt-controls,
+.yt-player.is-paused .yt-controls,
+.yt-player.is-seeking .yt-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 进度条：未播 / 缓冲 / 已播红 */
+.yt-progress {
+  position: relative;
+  width: 100%;
+  height: var(--yt-progress-hit);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+  margin-bottom: 2px;
+}
+
+.yt-progress-track {
+  position: relative;
+  width: 100%;
+  height: var(--yt-progress-h);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  transition: height 0.12s ease;
+  overflow: visible;
+}
+
+.yt-progress:hover .yt-progress-track,
+.yt-progress.is-dragging .yt-progress-track {
+  height: 5px;
+}
+
+.yt-progress-buffer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+.yt-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--yt-accent);
+  pointer-events: none;
+}
+
+.yt-progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 13px;
+  height: 13px;
+  margin-left: -6.5px;
+  border-radius: 999px;
+  background: var(--yt-accent);
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.1s ease;
+  pointer-events: none;
+}
+
+.yt-progress:hover .yt-progress-thumb,
+.yt-progress.is-dragging .yt-progress-thumb {
+  transform: translateY(-50%) scale(1);
+}
+
+.yt-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 46px;
+  color: var(--yt-icon);
+}
+
+.yt-bar-left,
+.yt-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.yt-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  width: var(--yt-btn-size);
+  height: var(--yt-btn-size);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.95;
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.yt-btn:hover {
+  opacity: 1;
+  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.yt-btn:active {
+  transform: scale(0.94);
+}
+
+.yt-btn:focus-visible {
+  outline: 2px solid var(--yt-focus);
+  outline-offset: 2px;
+}
+
+.yt-btn svg {
+  width: var(--yt-icon-size);
+  height: var(--yt-icon-size);
+  display: block;
+  pointer-events: none;
+}
+
+.yt-btn.is-on {
+  color: var(--yt-accent);
+}
+
+.yt-time {
+  padding: 0 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.yt-time .sep {
+  opacity: 0.65;
+  margin: 0 3px;
+}
+
+/* 音量 */
+.yt-volume-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.yt-volume-slider {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: width 0.16s ease, opacity 0.16s ease;
+  pointer-events: none;
+}
+
+.yt-volume-wrap:hover .yt-volume-slider,
+.yt-volume-wrap:focus-within .yt-volume-slider {
+  width: 64px;
+  opacity: 1;
+  margin-left: 2px;
+  pointer-events: auto;
+}
+
+.yt-volume-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  outline: none;
+  cursor: pointer;
+}
+
+.yt-volume-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #fff;
+  border: 0;
+}
+
+.yt-player.is-theater .yt-stage {
+  border-radius: 0;
+}
+
+.yt-player.is-fullscreen {
+  border-radius: 0;
+}
+
+.yt-player.is-fullscreen .yt-stage {
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+/* ─── 标题区 ─────────────────────────────────────────────── */
+
+.yt-meta {
+  padding: 14px 4px 0;
+}
+
+.yt-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.yt-channel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.yt-channel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.yt-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c00, #f00);
+  flex: 0 0 auto;
+}
+
+.yt-channel-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.yt-channel-subs {
+  font-size: 12px;
+  color: var(--yt-text-secondary);
+}
+
+.yt-subscribe {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--yt-text);
+  color: var(--yt-bg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.yt-subscribe:hover {
+  opacity: 0.88;
+  transform: scale(1.03);
+}
+
+.yt-subscribe.is-subscribed {
+  background: var(--yt-elevated);
+  color: var(--yt-text);
+}
+
+.yt-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.yt-chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--yt-surface);
+  color: var(--yt-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.yt-chip:hover {
+  background: var(--yt-elevated);
+  transform: scale(1.03);
+}
+
+.yt-chip svg {
+  width: 18px;
+  height: 18px;
+}
+
+.yt-chip.is-on {
+  color: var(--yt-accent);
+}
+
+/* ─── 图标说明 ───────────────────────────────────────────── */
+
+.icon-notes {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--yt-surface);
+}
+
+.icon-notes h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.icon-notes dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  font-size: 13px;
+}
+
+.icon-notes dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--yt-icon);
+}
+
+.icon-notes dd {
+  margin: 0;
+  color: var(--yt-text-secondary);
+}
+
+.icon-notes svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .yt-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .yt-title {
+    font-size: 16px;
+  }
+}

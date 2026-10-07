@@ -1,0 +1,248 @@
+<!-- AI生成 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apple Music 风格播放器</title>
+    <link rel="stylesheet" href="./music.css" />
+  </head>
+  <body>
+<p data-aigc-mark="1" style="margin:0 0 8px;font-size:10px;line-height:1.3;color:#6b6560;font-weight:400;">AI生成</p>
+
+    <div class="page">
+      <header class="page-head">
+        <div>
+          <h1>Apple Music 风格播放器</h1>
+          <p>
+            大封面 · 曲名/艺人 · 可拖动进度 · 上一首/播放/下一首 ·
+            音量。与发帖卡片同一套内联 SVG / 无障碍约定。
+          </p>
+        </div>
+        <button type="button" class="theme-toggle" id="themeToggle">
+          切换浅色强调
+        </button>
+      </header>
+
+      <!--
+        对外结构约定：
+        .am-player > art + meta + progress + transport + footer
+        播放逻辑挂 <audio>；样式与图标可独立替换。
+      -->
+      <section class="am-player" id="player" role="region" aria-label="音乐播放器">
+        <div class="am-art-wrap" data-am-art>
+          <div class="am-art-empty">专辑封面</div>
+        </div>
+
+        <div class="am-meta">
+          <h2 class="am-track" data-am-track>Midnight Drive</h2>
+          <p class="am-artist" data-am-artist>photo-cut</p>
+        </div>
+
+        <div
+          class="am-progress"
+          data-am-progress
+          role="slider"
+          tabindex="0"
+          aria-label="播放进度"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+          <div class="am-progress-track">
+            <div class="am-progress-fill" data-am-progress-fill></div>
+            <div class="am-progress-thumb" data-am-progress-thumb></div>
+          </div>
+        </div>
+
+        <div class="am-times">
+          <span data-am-current>0:00</span>
+          <span data-am-duration>0:00</span>
+        </div>
+
+        <div class="am-transport">
+          <button type="button" class="am-btn" data-am-prev aria-label="上一首"></button>
+          <button type="button" class="am-btn am-btn-play" data-am-play aria-label="播放"></button>
+          <button type="button" class="am-btn" data-am-next aria-label="下一首"></button>
+        </div>
+
+        <div class="am-footer">
+          <div class="am-side">
+            <button
+              type="button"
+              class="am-btn"
+              data-am-shuffle
+              aria-label="随机播放"
+              aria-pressed="false"
+            ></button>
+            <button
+              type="button"
+              class="am-btn"
+              data-am-repeat
+              aria-label="循环播放"
+              aria-pressed="false"
+            ></button>
+            <button type="button" class="am-btn" data-am-heart aria-label="喜欢" aria-pressed="false"></button>
+          </div>
+
+          <div class="am-volume-wrap">
+            <button type="button" class="am-btn" data-am-mute aria-label="静音" aria-pressed="false"></button>
+            <div class="am-volume-slider">
+              <input type="range" data-am-volume min="0" max="100" value="80" aria-label="音量" />
+            </div>
+          </div>
+
+          <div class="am-side">
+            <button type="button" class="am-btn" data-am-lyrics aria-label="歌词"></button>
+            <button type="button" class="am-btn" data-am-queue aria-label="播放列表"></button>
+          </div>
+        </div>
+
+        <audio id="audio" preload="metadata"></audio>
+      </section>
+
+      <section class="icon-notes" aria-label="图标说明">
+        <h2>图标与功能对照</h2>
+        <dl>
+          <dt>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8.2 5.3c0-.9.98-1.45 1.74-.97l10.3 6.7a1.15 1.15 0 0 1 0 1.94l-10.3 6.7c-.76.49-1.74-.06-1.74-.97V5.3z"/></svg>
+            播放 / 暂停
+          </dt>
+          <dd>强调色圆底大按钮，播放中显示双竖线</dd>
+
+          <dt>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.97 4.28A2 2 0 0 1 21 6v12a2 2 0 0 1-3.03 1.72l-9.99-6a2 2 0 0 1 0-3.44l9.99-6zM4 5h2.2v14H4z"/></svg>
+            上一首 / 下一首
+          </dt>
+          <dd>双三角 + 竖线，Apple Music 传输控件</dd>
+
+          <dt>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M18 14l4 4-4 4M18 2l4 4-4 4M2 18h2a4 4 0 0 0 3.3-1.7l5.4-8.6A4 4 0 0 1 16 6h6M2 6h2a4 4 0 0 1 3.6 2.2"/></svg>
+            随机
+          </dt>
+          <dd>随机播放开关，选中变强调色</dd>
+
+          <dt>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            循环
+          </dt>
+          <dd>循环播放，选中变强调色</dd>
+
+          <dt>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            喜欢
+          </dt>
+          <dd>空心 → 实心强调红</dd>
+
+          <dt>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 5 6 9H2v6h4l5 4V5z"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+            音量 / 静音
+          </dt>
+          <dd>喇叭图标 + 横向音量条</dd>
+        </dl>
+      </section>
+    </div>
+
+    <script type="module">
+      import { mountMusicPlayer, ICONS, formatTime } from "./music.js";
+
+      const root = document.getElementById("player");
+      const audio = document.getElementById("audio");
+      const themeToggle = document.getElementById("themeToggle");
+
+      // 预填图标
+      root.querySelector("[data-am-play]").innerHTML = ICONS.play;
+      root.querySelector("[data-am-prev]").innerHTML = ICONS.prev;
+      root.querySelector("[data-am-next]").innerHTML = ICONS.next;
+      root.querySelector("[data-am-shuffle]").innerHTML = ICONS.shuffle;
+      root.querySelector("[data-am-repeat]").innerHTML = ICONS.repeat;
+      root.querySelector("[data-am-heart]").innerHTML = ICONS.heart;
+      root.querySelector("[data-am-mute]").innerHTML = ICONS.volume;
+      root.querySelector("[data-am-lyrics]").innerHTML = ICONS.lyrics;
+      root.querySelector("[data-am-queue]").innerHTML = ICONS.queue;
+
+      // 演示：无外链音频时用振荡器合成极短占位；有 src 则换 audio.src
+      let audioCtx = null;
+      let osc = null;
+      let gain = null;
+      let demoTimer = null;
+      let demoT = 0;
+      const DEMO_DURATION = 30;
+
+      const ensureDemoSource = () => {
+        if (audio.src) return;
+        Object.defineProperty(audio, "duration", {
+          configurable: true,
+          get: () => DEMO_DURATION,
+        });
+        // 用极轻的正弦提示音反馈播放（可删）
+        audio.addEventListener("play", () => {
+          try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            gain = audioCtx.createGain();
+            gain.gain.value = 0.03;
+            osc = audioCtx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.value = 220;
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start();
+            clearInterval(demoTimer);
+            demoTimer = setInterval(() => {
+              demoT = Math.min(DEMO_DURATION, demoT + 0.25);
+              audio.currentTime = demoT;
+            }, 250);
+          } catch {
+            /* ignore */
+          }
+        });
+        audio.addEventListener("pause", () => {
+          try {
+            osc?.stop();
+            osc = null;
+          } catch {
+            /* ignore */
+          }
+          clearInterval(demoTimer);
+        });
+      };
+
+      ensureDemoSource();
+      audio.volume = 0.8;
+
+      mountMusicPlayer(root, audio, {
+        onEvent(type) {
+          if (type === "ended") {
+            demoT = 0;
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+          }
+        },
+      });
+
+      // 键盘：空格播放，←/→ 快退快进，M 静音
+      root.addEventListener("keydown", (e) => {
+        if (e.target.matches("input, textarea")) return;
+        if (e.code === "Space") {
+          e.preventDefault();
+          audio.paused ? audio.play().catch(() => {}) : audio.pause();
+        } else if (e.key === "ArrowRight") {
+          audio.currentTime = Math.min((audio.duration || DEMO_DURATION) - 0.1, audio.currentTime + 5);
+        } else if (e.key === "ArrowLeft") {
+          audio.currentTime = Math.max(0, audio.currentTime - 5);
+        } else if (e.key.toLowerCase() === "m") {
+          audio.muted = !audio.muted;
+        }
+      });
+
+      themeToggle.addEventListener("click", () => {
+        document.documentElement.style.setProperty("--am-accent", "#0a84ff");
+        document.documentElement.style.setProperty("--am-accent-soft", "rgba(10, 132, 255, 0.35)");
+        themeToggle.textContent = "已切换蓝色强调";
+      });
+
+      // 演示曲名
+      root.querySelector("[data-am-current]").textContent = "0:00";
+      root.querySelector("[data-am-duration]").textContent = formatTime(DEMO_DURATION);
+    </script>
+  </body>
+</html>
